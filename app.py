@@ -12,18 +12,17 @@ def get_trend_strength(count, total):
 def decode_personnel(text):
     """Translates Hudl tags to Standard Numbering (e.g., 2RB 1TE -> 21)"""
     text = str(text).upper()
-    rb = "0"
-    te = "0"
+    rb, te = "0", "0"
     if "1RB" in text: rb = "1"
-    if "2RB" in text: rb = "2"
-    if "0TE" in text: te = "0"
+    elif "2RB" in text: rb = "2"
+    
     if "1TE" in text: te = "1"
-    if "2TE" in text: te = "2"
-    # Fallback for OTE/OTE cases
-    if "OTE" in text and te == "0": te = "0"
+    elif "2TE" in text: te = "2"
+    elif "0TE" in text or "OTE" in text: te = "0"
+    
     return f"{rb}{te} Personnel"
 
-# --- 2. THE UI ---
+# --- 2. THE UI & DASHBOARD ---
 st.set_page_config(page_title="Lancer-Bot Pro", page_icon="🏈", layout="wide")
 
 with st.sidebar:
@@ -31,7 +30,7 @@ with st.sidebar:
         st.image("logo.png", width=150)
     except:
         st.subheader("🏈 Carlsbad Football")
-    st.title("Lancer-Bot v2.7")
+    st.title("Lancer-Bot v2.8")
 
 st.title("🏈 Offensive Identity Report")
 uploaded_file = st.file_uploader("Upload Hudl CSV", type="csv")
@@ -40,7 +39,7 @@ if uploaded_file:
     df = pd.read_csv(uploaded_file)
     df.columns = [str(c).strip().upper() for c in df.columns]
     
-    # Mapping [cite: 4, 38]
+    # Mapping
     mapping = {'GN/LS': 'GAIN', 'PLAY TYPE': 'TYPE', 'DN': 'DOWN', 
                'PERSONNEL': 'PERS_GRP', 'OFF FORM-OFFENSIVE FORMATION': 'FORM_GRP', 
                'ODK': 'ODK', 'OFF PLAY': 'PLAY_NAME'}
@@ -52,24 +51,32 @@ if uploaded_file:
     if 'TYPE' in df.columns and 'GAIN' in df.columns:
         df['TYPE'] = df['TYPE'].str.upper().str.strip()
         df['GAIN'] = pd.to_numeric(df['GAIN'], errors='coerce')
-        
-        # New: Decode the Personnel column for the Matrix [cite: 9, 11]
         if 'PERS_GRP' in df.columns:
             df['PERS_CODE'] = df['PERS_GRP'].apply(decode_personnel)
 
         tabs = st.tabs(["Intelligence", "Situational", "Danger Plays", "Formations", "Personnel", "Pivot Lab"])
 
-        with tabs[4]: # Personnel Matrix
-            st.header("Personnel Matrix (Standard Numbering)")
+        with tabs[4]: # Personnel Tab
+            st.header("Personnel Matrix & Tendency Alerts")
             p_df = df[df['TYPE'].isin(['RUN', 'PASS'])]
+            
             if 'PERS_CODE' in p_df.columns:
-                # Group by decoded codes (11, 21, etc.) 
-                pers_analysis = p_df.groupby('PERS_CODE')['TYPE'].value_counts(normalize=True).unstack().fillna(0) * 100
-                st.dataframe(pers_analysis.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
-                
-                st.subheader("Volume by Grouping")
-                st.bar_chart(df['PERS_CODE'].value_counts())
-            else:
-                st.warning("Could not decode personnel. Check Hudl tags.")
+                pers_stats = p_df.groupby('PERS_CODE')['TYPE'].value_counts(normalize=True).unstack().fillna(0) * 100
+                counts = p_df['PERS_CODE'].value_counts()
 
-        # [Other tabs remain with the same stabilized logic...]
+                # --- RED FLAG ALERTS ---
+                for group in pers_stats.index:
+                    if counts[group] >= 5: # Minimum sample size
+                        run_pct = pers_stats.loc[group, 'RUN'] if 'RUN' in pers_stats.columns else 0
+                        pass_pct = pers_stats.loc[group, 'PASS'] if 'PASS' in pers_stats.columns else 0
+                        
+                        if run_pct >= 90:
+                            st.error(f"🚨 **RED FLAG:** {group} is {run_pct:.0f}% RUN ({counts[group]} plays)")
+                        elif pass_pct >= 90:
+                            st.error(f"🚨 **RED FLAG:** {group} is {pass_pct:.0f}% PASS ({counts[group]} plays)")
+
+                st.dataframe(pers_stats.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+                st.subheader("Volume by Grouping")
+                st.bar_chart(counts)
+
+        # [Other tabs logic follows v2.7 stabilized code...]
