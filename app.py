@@ -1,108 +1,98 @@
 import streamlit as st
 import pandas as pd
-import os
+import re
 
-# --- 1. THE DECODER ---
-def decode_personnel(backfield, formation):
-    bf, form = str(backfield).upper().strip(), str(formation).upper().strip()
-    rb, te = "1", "0" 
-    if any(x in bf for x in ["2RB", "PRO", "SPLIT", "FULL"]): rb = "2"
-    elif any(x in bf for x in ["0RB", "EMPTY"]): rb = "0"
-    if any(x in form for x in ["2TE", "HEAVY", "JUMBO"]): te = "2"
-    elif any(x in form for x in ["1TE", "WING", "Y-TRIPS", "ACE"]): te = "1"
-    return f"{rb}{te} Personnel"
+# --- 1. THE BRAIN: PERSONNEL & FORMATION LOGIC ---
+def process_offensive_logic(formation):
+    f = str(formation).upper().strip()
+    
+    # A. NUMBERS FIRST (e.g., "11 SPREAD", "23 JUMBO")
+    match = re.match(r'^(\d)(\d)', f)
+    if match:
+        pers = f"{match.group(1)}{match.group(2)}"
+        raw_name = re.sub(r'^\d{2}\s*', '', f)
+    else:
+        # B. KEYWORD DECODING (Spread=11, Dubs=10, Heavy=23)
+        if any(x in f for x in ["HEAVY", "JUMBO", "BIG"]):
+            pers, raw_name = "23", "PRO/HEAVY"
+        elif "EMPTY" in f:
+            pers, raw_name = "00", "EMPTY"
+        elif "SPREAD" in f:
+            pers, raw_name = "11", "SPREAD"
+        elif "DUBS" in f or "TRIPS" in f:
+            pers, raw_name = "10", "TRIPS" if "TRIPS" in f else "SPREAD"
+        elif "ACE" in f:
+            pers, raw_name = "12", "ACE"
+        else:
+            pers, raw_name = "11", f # Lancer Default
+            
+    # C. FAMILY GROUPING
+    family = "OTHER"
+    if "EMPTY" in raw_name: family = "EMPTY"
+    elif any(x in raw_name for x in ["TRIPS", "TREY", "BUNCH", "3X1"]): family = "TRIPS"
+    elif any(x in raw_name for x in ["SPREAD", "DUBS", "2X2", "WIDE"]): family = "SPREAD"
+    elif any(x in raw_name for x in ["PRO", "I-", "HEAVY", "JUMBO"]): family = "PRO/HEAVY"
+    elif "ACE" in raw_name: family = "ACE"
+    elif "UNBALANCED" in raw_name: family = "UNBALANCED"
+    
+    return pers, family
 
-def get_trend_strength(count, total):
-    if total < 3: return "⭐"
-    pct = (count / total) * 100
-    if pct >= 85 and total >= 6: return "⭐⭐⭐⭐⭐"
-    return "⭐⭐⭐" if pct >= 60 else "⭐⭐"
-
-# --- 2. UI & SIDEBAR ---
+# --- 2. THE UI & DASHBOARD ---
 st.set_page_config(page_title="Lancer-Bot Pro", page_icon="🏈", layout="wide")
 
 with st.sidebar:
-    logo_file = next((f for f in ["logo.png", "Logo.png", "logo.PNG"] if os.path.exists(f)), None)
-    col1, col2, col3 = st.columns([0.5, 3, 0.5])
-    with col2:
-        if logo_file: st.image(logo_file, use_container_width=True)
-        else: st.subheader("🏈 Lancer-Bot")
-    st.divider()
-    st.title("Lancer-Bot v2.30")
-    st.info("System: Full Feature Suite Active")
+    try: st.image("logo.png", width=150)
+    except: st.subheader("🏈 Lancer-Bot")
+    st.title("v2.28")
+    st.info("Logic: Spread=11 | Dubs=10 | Heavy=23")
 
-st.title("🏈 Offensive Identity Report")
+st.title("🏈 Offensive Identity Dashboard")
 uploaded_file = st.file_uploader("Upload Hudl CSV", type="csv")
 
 if uploaded_file:
-    try:
-        df = pd.read_csv(uploaded_file, encoding='latin1')
-        df.columns = [str(c).strip() for c in df.columns]
+    df = pd.read_csv(uploaded_file)
+    df.columns = [str(c).strip() for c in df.columns]
+    
+    # Required Column Mapping
+    cols = {'type': 'PLAY TYPE', 'form': 'OFF FORM', 'gain': 'GN/LS', 'dn': 'DN', 'odk': 'ODK'}
+    
+    if all(cols[k] in df.columns for k in ['type', 'form']):
+        # Data Cleaning
+        df[cols['type']] = df[cols['type']].str.upper().str.strip()
+        if cols['odk'] in df.columns:
+            df = df[df[cols['odk']].str.contains('O', na=False, case=False)]
         
-        # Column Mapping
-        map_cols = {'type': 'PLAY TYPE', 'gain': 'GN/LS', 'form': 'OFF FORM', 'bf': 'BACKFIELD', 'play': 'OFF PLAY', 'dn': 'DN', 'odk': 'ODK'}
+        # Apply Master Logic
+        df[['PERSONNEL', 'FAMILY']] = df[cols['form']].apply(
+            lambda x: pd.Series(process_offensive_logic(x))
+        )
 
-        if all(map_cols[k] in df.columns for k in ['type', 'gain', 'form', 'bf']):
-            df[map_cols['type']] = df[map_cols['type']].astype(str).str.upper().str.strip()
-            df[map_cols['gain']] = pd.to_numeric(df[map_cols['gain']], errors='coerce')
-            
-            if map_cols['odk'] in df.columns:
-                df = df[df[map_cols['odk']].str.contains('O', na=False, case=False)]
-            
-            df['PERS_CODE'] = df.apply(lambda x: decode_personnel(x[map_cols['bf']], x[map_cols['form']]), axis=1)
-            df['Prev_Type'] = df[map_cols['type']].shift(1)
-            df['Prev_Gain'] = df[map_cols['gain']].shift(1)
+        tabs = st.tabs(["Personnel Matrix", "Formation Families", "Intelligence", "Pivot Lab"])
 
-            tabs = st.tabs(["Intelligence", "Situational", "Danger Plays", "Formations", "Personnel", "Pivot Lab"])
+        with tabs[0]: # Personnel Matrix
+            st.header("Personnel Tendencies")
+            p_data = df[df[cols['type']].isin(['RUN', 'PASS'])]
+            matrix = p_data.groupby('PERSONNEL')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+            counts = p_data['PERSONNEL'].value_counts().rename("Plays")
+            st.dataframe(pd.concat([matrix, counts], axis=1).style.background_gradient(cmap='RdYlGn_r', subset=['RUN', 'PASS']).format("{:.0f}%", subset=['RUN', 'PASS']))
 
-            with tabs[0]: # Intelligence
-                st.header("AI Intelligence Alerts")
-                intel = []
-                scr = df.head(10)
-                if not scr.empty:
-                    run_c = (scr[map_cols['type']] == 'RUN').sum()
-                    pct = (run_c/len(scr)) * 100
-                    intel.append({"Category": "Script", "Insight": "Opening Run Freq", "Stat": f"{pct:.0f}%", "Strength": get_trend_strength(run_c, len(scr))})
-                ps = df[(df['Prev_Type'] == 'PASS') & (df['Prev_Gain'] <= -4)]
-                if not ps.empty:
-                    safe = (df.loc[ps.index, map_cols['type']] == 'RUN').sum()
-                    intel.append({"Category": "Sequence", "Insight": "Post-Sack Response", "Stat": f"{(safe/len(ps))*100:.0f}%", "Strength": get_trend_strength(safe, len(ps))})
-                st.table(pd.DataFrame(intel))
+        with tabs[1]: # Formation Families
+            st.header("Formation Family Heat Map")
+            f_data = p_data.groupby('FAMILY')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+            st.dataframe(f_data.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
 
-            with tabs[1]: # Situational
-                st.header("Situational Heat Map")
-                clean = df[df[map_cols['type']].isin(['RUN', 'PASS'])]
-                if not clean.empty:
-                    st.dataframe(clean.groupby(map_cols['dn'])[map_cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100).style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+        with tabs[2]: # Intelligence
+            st.header("Scouting Alerts")
+            scr = df.head(10)
+            run_p = (scr[cols['type']] == 'RUN').mean() * 100
+            st.metric("Opening Script Run %", f"{run_p:.0f}%")
+            st.subheader("Audit: Formation to Logic Mapping")
+            st.table(df[[cols['form'], 'PERSONNEL', 'FAMILY']].drop_duplicates().head(15))
 
-            with tabs[2]: # Danger Plays
-                st.header("Top Yardage Producers")
-                danger = df.groupby(map_cols['play'])[map_cols['gain']].agg(['mean', 'count']).sort_values(by='mean', ascending=False).head(5)
-                danger.columns = ['Avg Gain', 'Times Run']
-                st.table(danger)
-
-            with tabs[3]: # Formations
-                st.header("Formation Tells")
-                f_stats = clean.groupby(map_cols['form'])[map_cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
-                st.dataframe(f_stats.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
-
-            with tabs[4]: # Personnel
-                st.header("Personnel Matrix")
-                p_stats = clean.groupby('PERS_CODE')[map_cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
-                counts = clean['PERS_CODE'].value_counts().rename("Plays")
-                st.dataframe(pd.concat([p_stats, counts], axis=1).style.background_gradient(subset=['RUN', 'PASS'], cmap='RdYlGn_r').format({'RUN':'{:.0f}%', 'PASS':'{:.0f}%', 'Plays':'{:.0f}'}))
-
-            with tabs[5]: # Pivot Lab
-                st.header("🧪 Custom Pivot Lab")
-                group = st.selectbox("Breakdown:", ['PERS_CODE', map_cols['form'], map_cols['dn'], map_cols['play']])
-                metric = st.selectbox("Metric:", [map_cols['gain'], map_cols['type']])
-                if metric == map_cols['gain']:
-                    piv = df.groupby(group)[map_cols['gain']].agg(['mean', 'count']).sort_values(by='mean', ascending=False)
-                    st.dataframe(piv.style.format({'mean': '{:.1f} yds', 'count': '{:.0f}'}).background_gradient(subset=['mean'], cmap='Greens'))
-                else:
-                    piv = df.groupby(group)[map_cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
-                    st.dataframe(piv.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
-        else:
-            st.error(f"Mapping Error. Missing expected columns in CSV.")
-    except Exception as e:
-        st.error(f"Error: {e}")
+        with tabs[3]: # Pivot Lab
+            st.header("🧪 Custom Analytics")
+            group = st.selectbox("Group By:", ['FAMILY', 'PERSONNEL', cols['dn']])
+            res = p_data.groupby(group)[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+            st.dataframe(res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+    else:
+        st.error(f"Missing columns. Need: {list(cols.values())}")
