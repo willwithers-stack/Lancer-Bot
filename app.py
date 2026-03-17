@@ -5,13 +5,11 @@ import re
 # --- 1. THE BRAIN: YOUR REFINED LOGIC ---
 def process_offensive_logic(formation):
     f = str(formation).upper().strip()
-    # A. NUMBERS FIRST check
     match = re.match(r'^(\d)(\d)', f)
     if match:
         pers = f"{match.group(1)}{match.group(2)}"
         raw_name = re.sub(r'^\d{2}\s*', '', f)
     else:
-        # B. KEYWORD DECODING (Spread=11, Dubs=10, Heavy=23)
         if any(x in f for x in ["HEAVY", "JUMBO", "BIG"]): pers, raw_name = "23", "PRO/HEAVY"
         elif "EMPTY" in f: pers, raw_name = "00", "EMPTY"
         elif "SPREAD" in f: pers, raw_name = "11", "SPREAD"
@@ -19,7 +17,6 @@ def process_offensive_logic(formation):
         elif "ACE" in f: pers, raw_name = "12", "ACE"
         else: pers, raw_name = "11", f 
             
-    # C. FAMILY GROUPING
     family = "OTHER"
     if "EMPTY" in raw_name: family = "EMPTY"
     elif any(x in raw_name for x in ["TRIPS", "TREY", "BUNCH", "3X1"]): family = "TRIPS"
@@ -33,8 +30,8 @@ def process_offensive_logic(formation):
 st.set_page_config(page_title="Lancer-Bot Pro", page_icon="🏈", layout="wide")
 
 with st.sidebar:
-    st.subheader("🏈 Lancer-Bot v2.32")
-    st.write("Metric Profile: **Complete Offensive Report**")
+    st.subheader("🏈 Lancer-Bot v2.33")
+    st.write("Metric Profile: **PDF Replica**")
     st.info("Logic: Spread=11 | Dubs=10 | Heavy=23")
 
 st.title("🏈 Complete Offensive Report (Player Ready)")
@@ -44,7 +41,6 @@ if uploaded_file:
     df = pd.read_csv(uploaded_file)
     df.columns = [str(c).strip() for c in df.columns]
     
-    # Original Stable Column Mapping [cite: 13, 16, 35]
     cols = {'type': 'PLAY TYPE', 'form': 'OFF FORM', 'gain': 'GN/LS', 
             'dn': 'DN', 'dist': 'DIST', 'odk': 'ODK', 'play': 'OFF PLAY', 'field': 'YARD LN'}
     
@@ -56,64 +52,83 @@ if uploaded_file:
         results = df[cols['form']].apply(lambda x: process_offensive_logic(x))
         df['PERSONNEL'] = [r[0] for r in results]
         df['FAMILY'] = [r[1] for r in results]
-        
-        # Original Filtering [cite: 10]
         p_data = df[df[cols['type']].isin(['RUN', 'PASS'])].copy()
 
-        tabs = st.tabs(["Formation Usage", "Personnel Matrix", "D&D Matrix", "Explosive Rates", "Field Zones"])
-
-        with tabs[0]: # Formation Usage [cite: 4]
-            st.header("Formation Usage")
+        # --- PDF PAGE 1: FORMATION & PERSONNEL USAGE ---
+        st.header("1. Core Identity & Usage")
+        c1, c2 = st.columns(2)
+        with c1:
+            st.subheader("Formation Usage")
             f_counts = p_data['FAMILY'].value_counts()
-            f_usage = (f_counts / len(p_data) * 100).round(1)
-            usage_df = pd.DataFrame({'Plays': f_counts, '% Usage': f_usage})
-            st.table(usage_df)
+            f_usage = pd.DataFrame({'Plays': f_counts, '% Usage': (f_counts/len(p_data)*100).round(0).astype(str) + '%'})
+            st.table(f_usage) #
+        with c2:
+            st.subheader("Personnel Group Usage")
+            p_counts = p_data['PERSONNEL'].value_counts()
+            st.table(pd.DataFrame({'Plays': p_counts})) #
 
-        with tabs[1]: # Personnel Matrix [cite: 10]
-            st.header("Run/Pass Distribution by Personnel")
-            matrix = p_data.groupby('PERSONNEL')[cols['type']].value_counts().unstack().fillna(0)
-            matrix['Run %'] = (matrix['RUN'] / (matrix['RUN'] + matrix['PASS']) * 100).round(0).astype(str) + '%'
-            matrix['Pass %'] = (matrix['PASS'] / (matrix['RUN'] + matrix['PASS']) * 100).round(0).astype(str) + '%'
-            st.table(matrix)
+        # --- PDF PAGE 2: DISTRIBUTIONS & D&D ---
+        st.markdown("---")
+        st.header("2. Distributions & Situations")
+        
+        st.subheader("Run/Pass Distribution by Personnel")
+        matrix = p_data.groupby('PERSONNEL')[cols['type']].value_counts().unstack().fillna(0)
+        matrix['Run %'] = (matrix['RUN'] / (matrix['RUN'] + matrix['PASS']) * 100).round(0).astype(str) + '%'
+        matrix['Pass %'] = (matrix['PASS'] / (matrix['RUN'] + matrix['PASS']) * 100).round(0).astype(str) + '%'
+        st.table(matrix) #
 
-        with tabs[2]: # Down & Distance Matrix 
-            st.header("Down & Distance Run/Pass Matrix")
-            # Create situational groupings [cite: 13, 14]
-            def get_situation(row):
-                d, dist = row[cols['dn']], row[cols['dist']]
-                if dist < 4: s = "<4"
-                elif 4 <= dist <= 7: s = "4-7"
-                else: s = "7+"
-                return f"{d} & {s}"
-            
-            p_data['Situation'] = p_data.apply(get_situation, axis=1)
-            dd_matrix = p_data.groupby('Situation')[cols['type']].value_counts().unstack().fillna(0)
-            dd_matrix['Run %'] = (dd_matrix['RUN'] / (dd_matrix['RUN'] + dd_matrix['PASS']) * 100).round(0).astype(str) + '%'
-            st.table(dd_matrix)
+        st.subheader("Down & Distance Run/Pass Matrix")
+        def get_situation(row):
+            d, dist = row[cols['dn']], row[cols['dist']]
+            if dist < 4: s = "<4"
+            elif 4 <= dist <= 7: s = "4-7"
+            else: s = "7+"
+            return f"{d}st & {s}" if d==1 else f"{d}nd & {s}" if d==2 else f"{d}rd & {s}" if d==3 else f"{d}th & {s}"
+        
+        p_data['Situation'] = p_data.apply(get_situation, axis=1)
+        dd_matrix = p_data.groupby('Situation')[cols['type']].value_counts().unstack().fillna(0)
+        dd_matrix['Run %'] = (dd_matrix['RUN'] / (dd_matrix['RUN'] + dd_matrix['PASS']) * 100).round(0).astype(str) + '%'
+        dd_matrix['Pass %'] = (dd_matrix['PASS'] / (dd_matrix['RUN'] + dd_matrix['PASS']) * 100).round(0).astype(str) + '%'
+        dd_matrix['Total'] = (dd_matrix['RUN'] + dd_matrix['PASS']).astype(int)
+        st.table(dd_matrix) #
 
-        with tabs[3]: # Explosive Rates [cite: 16, 17]
-            st.header("Play Type Productivity")
+        # --- PDF PAGE 3: PRODUCTIVITY & ZONES ---
+        st.markdown("---")
+        st.header("3. Productivity & Explosives")
+        
+        col_exp1, col_exp2 = st.columns(2)
+        with col_exp1:
+            st.subheader("Play Type Avg Gain")
+            avg_gn = p_data.groupby(cols['type'])[cols['gain']].mean()
+            st.table(avg_gn.rename("Avg Gain")) #
+        with col_exp2:
+            st.subheader("Explosive Rate")
             exp_run = (p_data[p_data[cols['type']] == 'RUN'][cols['gain']] >= 10).mean() * 100
             exp_pass = (p_data[p_data[cols['type']] == 'PASS'][cols['gain']] >= 20).mean() * 100
-            
-            c1, c2 = st.columns(2)
-            c1.metric("Run Explosive Rate (10+)", f"{exp_run:.0f}%")
-            c2.metric("Pass Explosive Rate (20+)", f"{exp_pass:.0f}%")
-            
-            st.subheader("Avg Gain by Family [cite: 26]")
-            st.dataframe(p_data.groupby('FAMILY')[cols['gain']].mean().sort_values(ascending=False).rename("Avg Gain"))
+            st.write(f"Run (10+ yds): **{exp_run:.0f}%**") #
+            st.write(f"Pass (20+ yds): **{exp_pass:.0f}%**") #
 
-        with tabs[4]: # Field Zones [cite: 34, 35]
-            st.header("Field Position Tendencies")
-            # Simplified zone logic [cite: 35]
-            def get_zone(yd):
-                if yd <= 20: return "Own 0-20"
-                if 21 <= yd <= 50: return "Own 21-50"
-                return "Opp 50-21"
-            
-            if cols['field'] in df.columns:
-                p_data['Zone'] = p_data[cols['field']].apply(get_zone)
-                zone_tend = p_data.groupby('Zone')[cols['type']].value_counts().unstack().fillna(0)
-                st.table(zone_tend)
+        st.subheader("Field Position Tendencies")
+        def get_zone(yd):
+            if yd <= 20: return "Own 0-20"
+            elif 21 <= yd <= 50: return "Own 21-50"
+            else: return "Opp 50-21"
+        
+        if cols['field'] in df.columns:
+            p_data['Zone'] = p_data[cols['field']].apply(get_zone)
+            zone_tend = p_data.groupby('Zone')[cols['type']].value_counts().unstack().fillna(0)
+            st.table(zone_tend) #
+
+        # --- PDF PAGE 4: PLAY PATTERNS ---
+        st.markdown("---")
+        st.header("4. Play Call Patterns")
+        c3, c4 = st.columns(2)
+        with c3:
+            st.subheader("Most Frequent Runs (All Zones)")
+            st.table(p_data[p_data[cols['type']]=='RUN'][cols['play']].value_counts().head(5)) #
+        with c4:
+            st.subheader("Most Frequent Passes (All Zones)")
+            st.table(p_data[p_data[cols['type']]=='PASS'][cols['play']].value_counts().head(5)) #
+
     else:
-        st.error(f"Required columns missing: {list(cols.values())}")
+        st.error(f"Missing columns: {list(cols.values())}")
