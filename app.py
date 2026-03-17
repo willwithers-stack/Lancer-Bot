@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from fpdf import FPDF
 
 # --- 1. THE LOGIC ---
 def get_trend_strength(count, total):
@@ -9,14 +10,39 @@ def get_trend_strength(count, total):
     if pct >= 70 and total >= 4: return "⭐⭐⭐⭐"
     return "⭐⭐⭐" if pct >= 60 else "⭐⭐"
 
+def create_pdf(df_intel, opponent_name):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("helvetica", 'B', 16)
+    pdf.cell(0, 10, f"Lancer-Bot Intelligence: {opponent_name}", new_x="LMARGIN", new_y="NEXT", align='C')
+    pdf.set_font("helvetica", size=10)
+    pdf.cell(0, 10, "Confidential Scouting Data", new_x="LMARGIN", new_y="NEXT", align='C')
+    pdf.ln(10)
+
+    pdf.set_font("helvetica", 'B', 11)
+    pdf.set_fill_color(200, 200, 200)
+    pdf.cell(40, 10, "Category", 1, 0, 'C', True)
+    pdf.cell(90, 10, "Insight", 1, 0, 'C', True)
+    pdf.cell(20, 10, "Freq", 1, 0, 'C', True)
+    pdf.cell(30, 10, "Strength", 1, 1, 'C', True)
+
+    pdf.set_font("helvetica", size=10)
+    for _, row in df_intel.iterrows():
+        clean_strength = str(row['Strength']).replace("⭐", "*")
+        pdf.cell(40, 10, str(row['Category']), 1)
+        pdf.cell(90, 10, str(row['Insight']), 1)
+        pdf.cell(20, 10, str(row['Stat']), 1, 0, 'C')
+        pdf.cell(30, 10, clean_strength, 1, 1, 'C')
+    
+    # FIX: Explicitly convert bytearray to bytes
+    return bytes(pdf.output())
+
 # --- 2. THE UI & BRANDING ---
 st.set_page_config(page_title="Lancer-Bot Pro", page_icon="🏈", layout="wide")
 
-# Sidebar for Logo & Branding
 with st.sidebar:
-    st.image("https://upload.wikimedia.org/wikipedia/en/2/2e/Carlsbad_High_School_Lancers_logo.png", width=150) # Replace with your direct image link
+    st.image("logo.png", width=150) 
     st.title("Lancer-Bot v2.0")
-    st.info("AI-Powered Defensive Intelligence")
 
 st.title("🏈 Offensive Identity Report")
 
@@ -26,7 +52,7 @@ uploaded_file = st.file_uploader("Upload Hudl CSV", type="csv")
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
     
-    # Mapping
+    # Mapping 
     gain_col = 'GN/LS'
     type_col = 'PLAY TYPE'
     down_col = 'DN'
@@ -56,12 +82,14 @@ if uploaded_file:
             intel_data.append({"Category": "Sequence", "Insight": "Post-Sack Safe Response", "Stat": f"{(safe/len(ps))*100:.0f}%", "Strength": get_trend_strength(safe, len(ps))})
         
         if intel_data:
-            st.table(pd.DataFrame(intel_data))
+            intel_df = pd.DataFrame(intel_data)
+            st.table(intel_df)
+            pdf_bytes = create_pdf(intel_df, opponent)
+            st.download_button("📥 Download PDF", data=pdf_bytes, file_name=f"{opponent}_Scout.pdf")
 
     with tab2:
         st.header("Situational Heat Map")
         dd_summary = df.groupby(down_col)[type_col].value_counts(normalize=True).unstack().fillna(0) * 100
-        # Applying Heat Map: Red for Pass-Heavy, Green for Run-Heavy
         st.dataframe(dd_summary.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
 
     with tab3:
@@ -82,7 +110,3 @@ if uploaded_file:
         if pers_col in df.columns:
             pers_analysis = df.groupby(pers_col)[type_col].value_counts(normalize=True).unstack().fillna(0) * 100
             st.dataframe(pers_analysis.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
-            st.bar_chart(df[pers_col].value_counts())
-
-else:
-    st.info("Upload file to generate reports.")
