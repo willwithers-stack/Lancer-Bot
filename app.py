@@ -2,15 +2,13 @@ import streamlit as st
 import pandas as pd
 import re
 
-# --- 1. CORE LOGIC: PERSONNEL FIRST ---
+# --- 1. CORE LOGIC ---
 def process_offensive_logic(formation):
     f = str(formation).upper().strip()
-    # Prioritize numbers at start (e.g., "20 Wing", "11 Spread")
     match = re.match(r'^(\d)(\d)', f)
     if match:
         pers = f"{match.group(1)}{match.group(2)}"
     else:
-        # Fallback keyword mapping
         if any(x in f for x in ["HEAVY", "JUMBO", "BIG"]): pers = "23"
         elif "EMPTY" in f: pers = "00"
         elif "DUBS" in f or "TRIPS" in f: pers = "10"
@@ -22,15 +20,13 @@ def process_offensive_logic(formation):
 # --- 2. UI SETUP ---
 st.set_page_config(page_title="Carlsbad Football Analytics", page_icon="🏈", layout="wide")
 
-# Sidebar - Logo Only
 with st.sidebar:
     try:
-        st.image("logo.png") # Pulls from Github root
+        st.image("logo.png") 
     except:
         st.subheader("🏈 CARLSBAD FOOTBALL")
 
 st.title("🏈 Carlsbad Football Analytics")
-st.subheader("Complete Offensive Report (Player Ready)")
 
 uploaded_file = st.file_uploader("Upload Hudl CSV", type="csv")
 
@@ -47,49 +43,58 @@ if uploaded_file:
         df['PERSONNEL'] = df[cols['form']].apply(process_offensive_logic)
         p_data = df[df[cols['type']].isin(['RUN', 'PASS'])].copy()
 
-        tabs = st.tabs(["📋 Personnel Usage", "📈 Situational Matrix", "⚡ Productivity & Alerts", "🧪 Pivot Lab"])
+        tabs = st.tabs(["📉 Situational Tells", "📋 Personnel Usage", "⚡ Productivity", "🧪 Pivot Lab"])
 
-        with tabs[0]: # PERSONNEL USAGE
-            st.header("Personnel Group Usage")
-            p_counts = p_data['PERSONNEL'].value_counts()
-            p_usage = pd.DataFrame({
-                'Plays': p_counts, 
-                '% Usage': (p_counts / len(p_data) * 100).round(0).astype(str) + '%'
-            })
-            st.table(p_usage)
-            st.info("Two-back sets make up more than half of all snaps.")
-
-        with tabs[1]: # DISTRIBUTIONS
-            st.header("Run/Pass Distribution")
-            matrix = p_data.groupby('PERSONNEL')[cols['type']].value_counts().unstack().fillna(0)
-            if not matrix.empty:
-                # FIXED: numeric_only=True added to prevent TypeError
-                matrix['Run %'] = (matrix['RUN'] / matrix.sum(axis=1, numeric_only=True) * 100).round(0).astype(int)
-                matrix['Pass %'] = (matrix['PASS'] / matrix.sum(axis=1, numeric_only=True) * 100).round(0).astype(int)
-                st.table(matrix.style.format({"Run %": "{0}%", "Pass %": "{0}%"}))
-
-            st.subheader("Down & Distance Matrix")
+        with tabs[0]: # SITUATIONAL TELLS
+            st.header("Down & Distance Play Tells")
+            
+            # Custom Situational Logic
             def get_sit(row):
                 d, dist = row[cols['dn']], row[cols['dist']]
-                s = "<4" if dist < 4 else "4-7" if dist <= 7 else "7+"
-                return f"{int(d)}st & {s}" if d==1 else f"{int(d)}nd & {s}" if d==2 else f"{int(d)}rd & {s}"
+                if d == 1 and dist >= 10: return "1st & 10 (Baseline)"
+                if d == 2:
+                    if dist <= 4: return "2nd & Short (1-4 yds)"
+                    if dist >= 7: return "2nd & Long (7+ yds)"
+                    return "2nd & Medium (5-6 yds)"
+                if d == 3:
+                    if dist <= 3: return "3rd & Short (1-3 yds)"
+                    if dist >= 7: return "3rd & Long (7+ yds)"
+                    return "3rd & Medium (4-6 yds)"
+                if d == 4:
+                    if dist <= 3: return "4th & Short (1-3 yds)"
+                    return "4th & Long (4+ yds)"
+                return f"{int(d)} down (Other)"
+
             p_data['Situation'] = p_data.apply(get_sit, axis=1)
             dd = p_data.groupby('Situation')[cols['type']].value_counts().unstack().fillna(0)
+            
             if not dd.empty:
-                # FIXED: numeric_only=True added to prevent TypeError
-                dd['Total'] = dd.sum(axis=1, numeric_only=True).astype(int)
-                st.table(dd)
+                # Ensure 100% Distribution
+                # numeric_only=True added to prevent mixed-type addition errors
+                row_sums = dd.sum(axis=1, numeric_only=True)
+                dd['Run %'] = (dd['RUN'] / row_sums * 100).round(0).astype(int)
+                dd['Pass %'] = 100 - dd['Run %'] # Guarantees 100% total
+                dd['Total Plays'] = row_sums.astype(int)
+                
+                st.table(dd.style.format({"Run %": "{0}%", "Pass %": "{0}%"}))
+                
+                st.info("""
+                **Analytics Baseline:** * 1st & 10 success is defined as a 4-6 yard gain.  
+                * 2nd & Short (1-4) is high-efficiency for two-down planning.  
+                * 3rd & Short (1-3) carries high conversion probability for runs.
+                """)
 
-        with tabs[2]: # PRODUCTIVITY & ALERTS
-            st.header("Tendency Alerts (70% Threshold)")
+        with tabs[1]: # PERSONNEL USAGE
+            st.header("Personnel Group Usage")
+            matrix = p_data.groupby('PERSONNEL')[cols['type']].value_counts().unstack().fillna(0)
             if not matrix.empty:
-                for pers, row in matrix.iterrows():
-                    if row['Run %'] >= 70:
-                        st.error(f"⚠️ **{pers} Personnel**: High Run Tendency ({row['Run %']}%)")
-                    elif row['Pass %'] >= 70:
-                        st.warning(f"⚠️ **{pers} Personnel**: High Pass Tendency ({row['Pass %']}%)")
+                p_sums = matrix.sum(axis=1, numeric_only=True)
+                matrix['Run %'] = (matrix['RUN'] / p_sums * 100).round(0).astype(int)
+                matrix['Pass %'] = 100 - matrix['Run %']
+                st.table(matrix.style.format({"Run %": "{0}%", "Pass %": "{0}%"}))
 
-            st.divider()
+        with tabs[2]: # PRODUCTIVITY
+            st.header("Productivity & Explosives")
             c1, c2 = st.columns(2)
             with c1:
                 st.subheader("Avg Gain")
@@ -103,7 +108,7 @@ if uploaded_file:
 
         with tabs[3]: # PIVOT LAB
             st.header("🧪 Personnel Pivot Lab")
-            row_choice = st.selectbox("Group By:", [cols['dn'], 'Situation', cols['play']])
+            row_choice = st.selectbox("Group By:", ['Situation', cols['play']])
             metric = st.radio("Metric:", ['Run/Pass %', 'Average Gain'])
             
             if metric == 'Run/Pass %':
