@@ -13,11 +13,10 @@ def get_trend_strength(count, total):
 st.set_page_config(page_title="Lancer-Bot Pro", page_icon="🏈", layout="wide")
 
 with st.sidebar:
-    # Safety check for the logo to prevent MediaFileStorageError
+    # Improved safety check for the logo
     try:
         st.image("logo.png", width=150)
-    except Exception:
-        st.warning("⚠️ logo.png not found in GitHub. Branding hidden.")
+    except:
         st.subheader("🏈 Carlsbad Football")
     
     st.title("Lancer-Bot v2.2")
@@ -29,7 +28,7 @@ uploaded_file = st.file_uploader("Upload Hudl CSV", type="csv")
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
     
-    # EXACT MAPPING FOR HUDL HEADERS
+    # Mapping
     gain_col = 'GN/LS'
     type_col = 'PLAY TYPE'
     down_col = 'DN'
@@ -38,76 +37,68 @@ if uploaded_file:
     pers_col = 'PERSONNEL'
     form_col = 'OFF FORM-offensive formation'
 
-    # Cleaning: Standardizing text and converting numbers
+    # Cleaning
     df[type_col] = df[type_col].str.upper().str.strip()
     df[gain_col] = pd.to_numeric(df[gain_col], errors='coerce')
-    
-    # Memory for Sequences
     df['Prev_Play_Type'] = df[type_col].shift(1)
     df['Prev_Gain'] = df[gain_col].shift(1)
 
-    # --- TABS FOR MOBILE NAVIGATION ---
     tab1, tab2, tab3, tab4, tab5 = st.tabs(["Intelligence", "Situational", "Danger Plays", "Formations", "Personnel"])
 
     with tab1:
         st.header("AI Intelligence Alerts")
         intel_data = []
-        
-        # Opening Drive Analysis (First 10 ODK='O' plays) [cite: 44-47]
         offense_only = df[df[odk_col].str.contains('O', na=False, case=False)].head(10)
         if not offense_only.empty:
             run_c = (offense_only[type_col] == 'RUN').sum()
-            intel_data.append({
-                "Category": "Opening Script", 
-                "Insight": "Drive 1 Run Freq", 
-                "Stat": f"{(run_c/len(offense_only))*100:.0f}%", 
-                "Strength": get_trend_strength(run_c, len(offense_only))
-            })
+            intel_data.append({"Category": "Opening Script", "Insight": "Drive 1 Run Freq", "Stat": f"{(run_c/len(offense_only))*100:.0f}%", "Strength": get_trend_strength(run_c, len(offense_only))})
         
-        # Post-Sack Response (Previous Pass with loss of 4+)
         ps = df[(df['Prev_Play_Type'] == 'PASS') & (df['Prev_Gain'] <= -4)]
         if not ps.empty:
             safe = (df.loc[ps.index, type_col] == 'RUN').sum()
-            intel_data.append({
-                "Category": "Sequence", 
-                "Insight": "Post-Sack Safe Response", 
-                "Stat": f"{(safe/len(ps))*100:.0f}%", 
-                "Strength": get_trend_strength(safe, len(ps))
-            })
+            intel_data.append({"Category": "Sequence", "Insight": "Post-Sack Safe Response", "Stat": f"{(safe/len(ps))*100:.0f}%", "Strength": get_trend_strength(safe, len(ps))})
         
         if intel_data:
             st.table(pd.DataFrame(intel_data))
 
     with tab2:
         st.header("Situational Heat Map")
-        # Filters for only RUN/PASS for clean matrix [cite: 10-13]
         clean_df = df[df[type_col].isin(['RUN', 'PASS'])]
         if not clean_df.empty:
             dd_summary = clean_df.groupby(down_col)[type_col].value_counts(normalize=True).unstack().fillna(0) * 100
-            # Red for Pass-heavy, Green for Run-heavy
-            st.dataframe(dd_summary.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            try:
+                st.dataframe(dd_summary.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            except ImportError:
+                st.dataframe(dd_summary.format("{:.0f}%"))
+                st.warning("Install 'matplotlib' to enable heat map colors.")
 
     with tab3:
-        st.header("Top Yardage Producers (Danger Plays) [cite: 15-24]")
+        st.header("Top Yardage Producers")
         if play_col in df.columns:
             danger = df.groupby(play_col)[gain_col].agg(['mean', 'count']).sort_values(by='mean', ascending=False).head(5)
             danger.columns = ['Avg Gain', 'Times Run']
             st.table(danger)
 
     with tab4:
-        st.header("Formation Tells [cite: 4, 25-27]")
+        st.header("Formation Tells")
         if form_col in df.columns:
             f_df = df[df[type_col].isin(['RUN', 'PASS'])]
             form_analysis = f_df.groupby(form_col)[type_col].value_counts(normalize=True).unstack().fillna(0) * 100
-            st.dataframe(form_analysis.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            try:
+                st.dataframe(form_analysis.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            except:
+                st.dataframe(form_analysis)
 
     with tab5:
-        st.header("Personnel Matrix [cite: 9-11]")
+        st.header("Personnel Matrix")
         if pers_col in df.columns:
             p_df = df[df[type_col].isin(['RUN', 'PASS'])]
             pers_analysis = p_df.groupby(pers_col)[type_col].value_counts(normalize=True).unstack().fillna(0) * 100
-            st.dataframe(pers_analysis.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            try:
+                st.dataframe(pers_analysis.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            except:
+                st.dataframe(pers_analysis)
             st.bar_chart(df[pers_col].value_counts())
-
 else:
-    st.info("Upload a Hudl CSV to populate all breakdown tabs.")
+    st.info("Upload a Hudl CSV to see your full Lancer-Bot report.")
+    
