@@ -6,7 +6,7 @@ import re
 def process_offensive_logic(formation):
     f = str(formation).upper().strip()
     
-    # A. NUMBERS FIRST
+    # A. NUMBERS FIRST check
     match = re.match(r'^(\d)(\d)', f)
     if match:
         pers = f"{match.group(1)}{match.group(2)}"
@@ -26,7 +26,7 @@ def process_offensive_logic(formation):
         else:
             pers, raw_name = "11", f 
             
-    # C. FAMILY GROUPING (Logic based on your session)
+    # C. FAMILY GROUPING
     family = "OTHER"
     if "EMPTY" in raw_name: family = "EMPTY"
     elif any(x in raw_name for x in ["TRIPS", "TREY", "BUNCH", "3X1"]): family = "TRIPS"
@@ -41,12 +41,14 @@ def process_offensive_logic(formation):
 st.set_page_config(page_title="Lancer-Bot Pro", page_icon="🏈", layout="wide")
 
 with st.sidebar:
-    try: st.image("logo.png", width=150)
-    except: st.subheader("🏈 Lancer-Bot")
-    st.title("v2.29")
+    try: 
+        st.image("logo.png", use_container_width=True)
+    except: 
+        st.subheader("🏈 Lancer-Bot")
+    st.title("v2.30")
     st.info("Logic: Spread=11 | Dubs=10 | Heavy=23")
 
-st.title("🏈 Offensive Identity & Explosive Plays")
+st.title("🏈 Offensive Identity Dashboard")
 uploaded_file = st.file_uploader("Upload Hudl CSV", type="csv")
 
 if uploaded_file:
@@ -61,14 +63,31 @@ if uploaded_file:
         # Clean Data
         df[cols['type']] = df[cols['type']].str.upper().str.strip()
         df[cols['gain']] = pd.to_numeric(df[cols['gain']], errors='coerce').fillna(0)
+        
+        # Filter for Offense only
         if cols['odk'] in df.columns:
             df = df[df[cols['odk']].str.contains('O', na=False, case=False)]
         
         # Apply Logic
-        df[['PERSONNEL', 'FAMILY']] = df[cols['form']].apply(lambda x: pd.Series(process_offensive_logic(x)))
+        results = df[cols['form']].apply(lambda x: process_offensive_logic(x))
+        df['PERSONNEL'] = [r[0] for r in results]
+        df['FAMILY'] = [r[1] for r in results]
 
         tabs = st.tabs(["Personnel Matrix", "Formation Families", "Danger Plays", "Pivot Lab", "Audit"])
 
-        with tabs[0]: # Personnel Matrix
+        # Filter for actual Run/Pass plays for tendencies
+        p_data = df[df[cols['type']].isin(['RUN', 'PASS'])].copy()
+
+        with tabs[0]: 
             st.header("Personnel Tendencies")
-            p_data = df[df
+            if not p_data.empty:
+                matrix = p_data.groupby('PERSONNEL')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+                avg_gn = p_data.groupby('PERSONNEL')[cols['gain']].mean().rename("Avg Gain")
+                counts = p_data['PERSONNEL'].value_counts().rename("Plays")
+                st.dataframe(pd.concat([matrix, avg_gn, counts], axis=1).style.background_gradient(cmap='RdYlGn_r', subset=['RUN', 'PASS']).format("{:.1f} yds", subset=['Avg Gain']).format("{:.0f}%", subset=['RUN', 'PASS']))
+
+        with tabs[1]:
+            st.header("Family Heat Map")
+            if not p_data.empty:
+                f_data = p_data.groupby('FAMILY')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+                f_gain = p_data.groupby('FAMILY')[cols['gain']].mean
