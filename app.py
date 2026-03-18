@@ -28,7 +28,7 @@ def get_stars(percentage):
 st.set_page_config(page_title="Carlsbad Football Analytics", page_icon="🏈", layout="wide")
 
 with st.sidebar:
-    # Handle Case Sensitivity: Logo.png vs logo.png
+    # Robust Logo Search
     logo_files = ["Logo.png", "logo.png"]
     found_logo = False
     for lf in logo_files:
@@ -39,7 +39,7 @@ with st.sidebar:
     if not found_logo:
         st.subheader("🏈 CARLSBAD FOOTBALL")
     st.write("---")
-    st.caption("v2.65 Clean Foundation")
+    st.caption("v2.66 Metric Recovery")
 
 st.title("🏈 Carlsbad Football Analytics")
 
@@ -61,23 +61,16 @@ if uploaded_file:
         df[cols['gain']] = pd.to_numeric(df[cols['gain']], errors='coerce').fillna(0)
         df['PERSONNEL'] = df[cols['form']].apply(process_offensive_logic)
         
-        # --- DRIVE DETECTION (Heuristic Backup) ---
-        # Identify non-offensive markers to separate drives
+        # --- STABLE DRIVE DETECTION ---
         st_keywords = ['PUNT', 'FG', 'KICK', 'PAT', 'FIELD GOAL']
         df['Is_ST'] = df[cols['type']].apply(lambda x: any(kw in x for kw in st_keywords))
         df['Drive_ID'] = ((df[cols['odk']] != df[cols['odk']].shift()) | (df['Is_ST'] == True)).cumsum()
         
         p_data = df[df[cols['type']].isin(['RUN', 'PASS'])].copy()
 
-        # CURRENT TAB SUITE
         tabs = st.tabs([
-            "📊 Personnel/Formations", 
-            "🎯 3rd Down", 
-            "📈 Frequency & Patterns", 
-            "📍 Field Position", 
-            "🟢 Red/Green Zone", 
-            "🔮 Potpourri & AI", 
-            "🧪 Custom Pivot Lab"
+            "📊 Personnel/Formations", "🎯 3rd Down", "📈 Frequency & Patterns", 
+            "📍 Field Position", "🟢 Red/Green Zone", "🔮 Potpourri & AI", "🧪 Pivot Lab"
         ])
 
         with tabs[0]: # PERSONNEL/FORMATIONS
@@ -107,42 +100,28 @@ if uploaded_file:
                 (p_data[cols['type']] == 'RUN') & (p_data[cols['gain']] >= 10), True,
                 np.where((p_data[cols['type']] == 'PASS') & (p_data[cols['gain']] >= 20), True, False)
             )
-            st.write("**Explosive Rate by Down**")
-            exp_table = p_data.groupby([cols['dn'], cols['type']])['Explosive'].mean().unstack().mul(100)
-            st.dataframe(exp_table.style.background_gradient(cmap='Greens').format("{:.1f}%"))
-
-        with tabs[3]: # FIELD POSITION
-            st.header("Field Zone Tendencies")
-            def get_zone(yd):
-                if yd <= 20: return "0-20 (Own)"
-                if yd <= 50: return "21-50 (Midfield)"
-                return "49-21 (Opponent)"
-            p_data['Zone'] = p_data[cols['field']].apply(get_zone)
-            z_res = p_data.groupby('Zone')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
-            st.dataframe(z_res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
-
-        with tabs[4]: # RED/GREEN ZONE
-            st.header("Red & Green Zone Analytics")
-            rg_data = p_data[p_data[cols['field']] <= 20].copy()
-            if not rg_data.empty:
-                rg_data['RG_Zone'] = rg_data[cols['field']].apply(lambda x: "🟢 Green Zone (<10)" if x <= 10 else "🔴 Red Zone (20-11)")
-                st.table(rg_data.groupby(['RG_Zone', cols['play']]).size().unstack(fill_value=0))
-            else:
-                st.info("No plays detected inside the 20.")
+            # Restored Actual Play Names for Explosives
+            st.subheader("Recent Explosive Plays")
+            st.table(p_data[p_data['Explosive'] == True][[cols['dn'], cols['dist'], cols['play'], cols['gain']]].sort_values(by=cols['gain'], ascending=False).head(5))
+            
+            st.subheader("Explosive Rate by Down")
+            exp_table = p_data.groupby([cols['dn'], cols['type']], as_index=False)['Explosive'].mean()
+            exp_pivot = exp_table.pivot(index=cols['dn'], columns=cols['type'], values='Explosive').mul(100)
+            st.dataframe(exp_pivot.style.background_gradient(cmap='Greens').format("{:.1f}%"))
 
         with tabs[5]: # POTPOURRI & AI
-            st.header("🤖 AI Intelligence Alerts")
+            st.header("🤖 AI Scouting Intelligence")
             intel_data = []
             
-            # Post-Sack Response Alert
+            # Post-Sack Response
             sacks = p_data[(p_data[cols['type']] == 'PASS') & (p_data[cols['gain']] <= -4)].index
             post_sack = p_data.loc[[i+1 for i in sacks if i+1 in p_data.index]]
             if not post_sack.empty:
                 run_resp = (post_sack[cols['type']] == 'RUN').mean() * 100
                 intel_data.append({"Category": "Sequence", "Insight": "Post-Sack Run Resp", "Stat": f"{run_resp:.0f}%", "Strength": get_stars(run_resp)})
 
-            # Mid-Field Run Alert
-            mid = p_data[p_data['Zone'] == "21-50 (Midfield)"]
+            # Mid-Field Tendency
+            mid = p_data[(p_data[cols['field']] >= 21) & (p_data[cols['field']] <= 50)]
             if not mid.empty:
                 rate = (mid[cols['type']] == 'RUN').mean() * 100
                 intel_data.append({"Category": "Zone", "Insight": "Mid-Field Run", "Stat": f"{rate:.0f}%", "Strength": get_stars(rate)})
@@ -152,13 +131,12 @@ if uploaded_file:
 
         with tabs[6]: # PIVOT LAB
             st.header("🧪 Custom Pivot Lab")
-            row_choice = st.selectbox("Group By:", ['PERSONNEL', cols['form'], cols['dn'], 'Zone'])
+            row_choice = st.selectbox("Group By:", ['PERSONNEL', cols['form'], cols['dn']])
             metric = st.radio("Metric:", ['Run/Pass %', 'Average Gain'])
             if metric == 'Run/Pass %':
                 res = p_data.groupby(row_choice)[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
                 st.dataframe(res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
             else:
-                # Fixed Series attribute error [cite: 727]
                 res = p_data.groupby(row_choice)[cols['gain']].mean().to_frame(name="Avg Gain")
                 st.dataframe(res.style.background_gradient(cmap='Greens').format("{:.1f} yds"))
     else:
