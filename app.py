@@ -17,11 +17,18 @@ def process_offensive_logic(formation):
         else: pers = "11"
     return pers
 
+def get_stars(percentage):
+    if percentage >= 85: return "⭐⭐⭐⭐⭐"
+    if percentage >= 75: return "⭐⭐⭐⭐"
+    if percentage >= 65: return "⭐⭐⭐"
+    if percentage >= 50: return "⭐⭐"
+    return "⭐"
+
 # --- 2. UI SETUP ---
 st.set_page_config(page_title="Carlsbad Football Analytics", page_icon="🏈", layout="wide")
 
 with st.sidebar:
-    # Robust Logo Search (Handles Case Sensitivity for Logo.png)
+    # Logo Handling (Case Sensitive check for Logo.png)
     logo_files = ["Logo.png", "logo.png"]
     found_logo = False
     for lf in logo_files:
@@ -32,7 +39,7 @@ with st.sidebar:
     if not found_logo:
         st.subheader("🏈 CARLSBAD FOOTBALL")
     st.write("---")
-    st.caption("v2.62 AI Intelligence Edition")
+    st.caption("v2.63 AI Intelligence & Alerts")
 
 st.title("🏈 Carlsbad Football Analytics")
 
@@ -42,6 +49,7 @@ if uploaded_file:
     df = pd.read_csv(uploaded_file)
     df.columns = [str(c).strip() for c in df.columns]
     
+    # Identify Play Number and ODK
     play_no_col = next((c for c in df.columns if c.upper() in ['PLAY #', 'PL #', 'PLAY NO']), None)
     cols = {
         'type': 'PLAY TYPE', 'form': 'OFF FORM', 'gain': 'GN/LS', 
@@ -55,11 +63,18 @@ if uploaded_file:
         df[cols['gain']] = pd.to_numeric(df[cols['gain']], errors='coerce').fillna(0)
         df['PERSONNEL'] = df[cols['form']].apply(process_offensive_logic)
         
-        # Drive detection
+        # Drive detection logic
         st_keywords = ['PUNT', 'FG', 'KICK', 'PAT', 'FIELD GOAL']
         df['Is_ST'] = df[cols['type']].apply(lambda x: any(kw in x for kw in st_keywords))
         df['Drive_ID'] = ((df[cols['odk']] != df[cols['odk']].shift()) | (df['Is_ST'] == True)).cumsum()
+        
         p_data = df[df[cols['type']].isin(['RUN', 'PASS'])].copy()
+        
+        # Game Detection
+        if play_no_col:
+            p_data['Game_ID'] = (p_data[play_no_col].diff() < -10).cumsum()
+        else:
+            p_data['Game_ID'] = 0
 
         tabs = st.tabs([
             "📊 Personnel/Formations", "🎯 3rd Down", "📈 Frequency & Patterns", 
@@ -69,32 +84,40 @@ if uploaded_file:
         # ... (Previous Tabs 0-4 are stable) ...
 
         with tabs[5]: # POTPOURRI & AI INTELLIGENCE
-            st.header("🤖 AI Scouting Intelligence")
+            st.header("🤖 AI Intelligence Alerts")
             
-            # 1. Automatic Personnel Tendency Alerts (70% Threshold)
-            matrix = p_data.groupby('PERSONNEL')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
-            if not matrix.empty:
-                st.subheader("High Tendency Alerts")
-                for pers, row in matrix.iterrows():
-                    if row['RUN'] >= 70:
-                        st.error(f"⚠️ **{pers} Personnel**: High Run Tell ({row['RUN']:.0f}%)")
-                    elif row['PASS'] >= 70:
-                        st.warning(f"⚠️ **{pers} Personnel**: High Pass Tell ({row['PASS']:.0f}%)")
+            intel_data = []
 
-            # 2. Mid-Field Confidence Meter (Own 21-50)
-            mid_field = p_data[(p_data[cols['field']] >= 21) & (p_data[cols['field']] <= 50)]
-            if not mid_field.empty:
-                run_rate = (mid_field[cols['type']] == 'RUN').mean() * 100
-                st.divider()
-                st.subheader("Zone Intelligence: Mid-Field")
-                st.write(f"Offense runs the ball **{run_rate:.0f}%** of the time from their own 21-50.")
-                st.select_slider("AI Confidence Meter", options=["Low", "Medium", "High", "Lock"], 
-                                 value="Lock" if run_rate > 80 else ("High" if run_rate > 70 else "Medium"), disabled=True)
+            # 1. Opening Run Frequency
+            first_drive = p_data.groupby('Game_ID').apply(lambda x: x[x['Drive_ID'] == x['Drive_ID'].min()]).reset_index(drop=True)
+            if not first_drive.empty:
+                run_freq = (first_drive[cols['type']] == 'RUN').mean() * 100
+                intel_data.append({"Category": "Script", "Insight": "Opening Run Freq", "Stat": f"{run_freq:.0f}%", "Strength": get_stars(run_freq)})
 
-            # 3. Correlation Check: Motion vs Direction
+            # 2. Post-Sack Response
+            # Identify sacks (Pass play with loss of 4+)
+            sacks = p_data[(p_data[cols['type']] == 'PASS') & (p_data[cols['gain']] <= -4)].index
+            post_sack_plays = p_data.loc[[i+1 for i in sacks if i+1 in p_data.index]]
+            if not post_sack_plays.empty:
+                # Check for run vs pass on the next play
+                run_response = (post_sack_plays[cols['type']] == 'RUN').mean() * 100
+                intel_data.append({"Category": "Sequence", "Insight": "Post-Sack Run Resp", "Stat": f"{run_response:.0f}%", "Strength": get_stars(run_response)})
+
+            # 3. Mid-Field Run Tendency
+            mid = p_data[(p_data[cols['field']] >= 21) & (p_data[cols['field']] <= 50)]
+            if not mid.empty:
+                mid_run = (mid[cols['type']] == 'RUN').mean() * 100
+                intel_data.append({"Category": "Zone", "Insight": "Mid-Field Run", "Stat": f"{mid_run:.0f}%", "Strength": get_stars(mid_run)})
+
+            # Display Table
+            if intel_data:
+                st.table(pd.DataFrame(intel_data))
+            
             st.divider()
+            
+            # 4. Motion/Play Direction Correlation
             if cols['motion'] in p_data.columns and cols['p_dir'] in p_data.columns:
-                st.subheader("Motion Direction Correlation")
+                st.subheader("Motion Direction Analysis")
                 def check_corr(row):
                     m, p = str(row[cols['motion']]).upper(), str(row[cols['p_dir']]).upper()
                     if m[0:1] == p[0:1] and m[0:1] in ['L','R']: return 'With Motion'
