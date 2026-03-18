@@ -7,7 +7,7 @@ import numpy as np
 # --- 1. CORE SCORING LOGIC ---
 def process_offensive_logic(formation):
     f = str(formation).upper().strip()
-    match = re.match(r'^(\d)(\d)', f)  # ✅ Fixed regex
+    match = re.match(r'^(\d)(\d)', f)
     if match:
         pers = f"{match.group(1)}{match.group(2)}"
     else:
@@ -35,13 +35,13 @@ with st.sidebar:
     found_logo = False
     for lf in logo_files:
         if os.path.exists(lf):
-            st.image(lf, width=150)  # ✅ Fixed — was width='stretch'
+            st.image(lf, width=150)
             found_logo = True
             break
     if not found_logo:
         st.subheader("🏈 CARLSBAD FOOTBALL")
     st.write("---")
-    st.caption("v2.78 Stability Fix")
+    st.caption("v2.79 Personnel Update")
 
 st.title("🏈 Carlsbad Football Analytics")
 
@@ -89,9 +89,54 @@ if uploaded_file:
         # --- TAB 0: PERSONNEL IDENTITY ---
         with tabs[0]:
             st.header("📊 Personnel Identity")
+
             pers_counts = p_data['PERSONNEL'].value_counts().to_frame("Plays")
             pers_counts['%'] = (pers_counts['Plays'] / pers_counts['Plays'].sum() * 100).round(0).astype(int)
+            st.subheader("Overall Usage")
             st.dataframe(pers_counts, width="stretch")
+
+            st.divider()
+
+            c1, c2 = st.columns(2)
+            with c1:
+                st.subheader("🏃 Top 5 Run Personnel")
+                run_pers = (
+                    p_data[p_data[cols['type']] == 'RUN']
+                    .groupby('PERSONNEL')
+                    .agg(Plays=('PERSONNEL', 'count'), Avg_Gain=(cols['gain'], 'mean'))
+                    .sort_values('Plays', ascending=False)
+                    .head(5)
+                )
+                run_pers['Avg_Gain'] = run_pers['Avg_Gain'].round(1)
+                run_pers['Run %'] = (run_pers['Plays'] / run_pers['Plays'].sum() * 100).round(0).astype(int)
+                st.dataframe(run_pers.style.background_gradient(cmap='RdYlGn', subset=['Avg_Gain']), width="stretch")
+
+            with c2:
+                st.subheader("🎯 Top 5 Pass Personnel")
+                pass_pers = (
+                    p_data[p_data[cols['type']] == 'PASS']
+                    .groupby('PERSONNEL')
+                    .agg(Plays=('PERSONNEL', 'count'), Avg_Gain=(cols['gain'], 'mean'))
+                    .sort_values('Plays', ascending=False)
+                    .head(5)
+                )
+                pass_pers['Avg_Gain'] = pass_pers['Avg_Gain'].round(1)
+                pass_pers['Pass %'] = (pass_pers['Plays'] / pass_pers['Plays'].sum() * 100).round(0).astype(int)
+                st.dataframe(pass_pers.style.background_gradient(cmap='RdYlGn', subset=['Avg_Gain']), width="stretch")
+
+            st.divider()
+
+            st.subheader("Run/Pass Tendency by Personnel")
+            rp_split = (
+                p_data.groupby('PERSONNEL')[cols['type']]
+                .value_counts(normalize=True)
+                .unstack()
+                .fillna(0)
+                .mul(100)
+                .round(0)
+                .astype(int)
+            )
+            st.dataframe(rp_split.style.background_gradient(cmap='RdYlGn_r'), width="stretch")
 
         # --- TAB 1: 3RD DOWN ---
         with tabs[1]:
