@@ -175,7 +175,7 @@ if uploaded_file:
             gz = p_data[p_data[cols['field']].between(21, 40)].copy()
             c1, c2 = st.columns(2)
             with c1:
-                st.subheader("🔴 Red Zone (1-20)")
+                st.subheader("🔴 Red Zone (20-11)")
                 if not rz.empty:
                     st.metric("TD/FD Rate", f"{round(rz['Is_FD'].mean()*100)}%")
                     st.table(rz[cols['play']].value_counts().head(5).to_frame("Plays"))
