@@ -182,7 +182,7 @@ if uploaded_file:
                 else:
                     st.info("No red zone plays.")
             with c2:
-                st.subheader("🟢 Green Zone (21-40)")
+                st.subheader("🟢 Green Zone (10-1)")
                 if not gz.empty:
                     st.metric("Success Rate", f"{round(gz['Is_Succ'].mean()*100)}%")
                     st.table(gz[cols['play']].value_counts().head(5).to_frame("Plays"))
