@@ -19,16 +19,17 @@ def process_offensive_logic(formation):
 # --- 2. UI SETUP ---
 st.set_page_config(page_title="Carlsbad Football Analytics", page_icon="🏈", layout="wide")
 
-# Sidebar - Logo Robust Pathing
 with st.sidebar:
-    logo_path = os.path.join(os.getcwd(), "logo.png")
-    if os.path.exists(logo_path):
-        st.image(logo_path, use_container_width=True)
-    else:
-        try:
-            st.image("logo.png", use_container_width=True)
-        except:
-            st.subheader("🏈 CARLSBAD FOOTBALL")
+    # Handle Case Sensitivity for Logo.png vs logo.png
+    logo_files = ["Logo.png", "logo.png"]
+    found_logo = False
+    for lf in logo_files:
+        if os.path.exists(lf):
+            st.image(lf, use_container_width=True)
+            found_logo = True
+            break
+    if not found_logo:
+        st.subheader("🏈 CARLSBAD FOOTBALL")
 
 st.title("🏈 Carlsbad Football Analytics")
 
@@ -39,7 +40,7 @@ if uploaded_file:
     df.columns = [str(c).strip() for c in df.columns]
     
     cols = {'type': 'PLAY TYPE', 'form': 'OFF FORM', 'gain': 'GN/LS', 
-            'dn': 'DN', 'dist': 'DIST', 'play': 'OFF PLAY', 'field': 'YARD LN'}
+            'dn': 'DN', 'dist': 'DIST', 'play': 'OFF PLAY', 'field': 'YARD LN', 'series': 'SERIES'}
     
     if all(cols[k] in df.columns for k in ['type', 'form', 'gain']):
         df[cols['type']] = df[cols['type']].str.upper().str.strip()
@@ -47,83 +48,89 @@ if uploaded_file:
         df['PERSONNEL'] = df[cols['form']].apply(process_offensive_logic)
         p_data = df[df[cols['type']].isin(['RUN', 'PASS'])].copy()
 
-        # Situational Logic
-        def get_sit(row):
-            d, dist = row[cols['dn']], row[cols['dist']]
-            if d == 1: return "1st & 10 (Baseline)" if dist >= 10 else "1st & <10"
-            if d == 2:
-                if dist <= 4: return "2nd & Short (1-4)"
-                if dist >= 7: return "2nd & Long (7+)"
-                return "2nd & Mid"
-            if d == 3:
-                if dist <= 3: return "3rd & Short (1-3)"
-                if 4 <= dist <= 7: return "3rd Down (4-7)"
-                if dist >= 7: return "3rd & Long (7+)"
-            if d == 4:
-                return "4th & Short (1-3)" if dist <= 3 else "4th & Long"
-            return f"{int(d)} Down Other"
+        # Custom Foundation Tabs
+        tabs = st.tabs([
+            "📊 Personnel/Formations", "🎯 3rd Down", "📈 Frequency & Patterns", 
+            "📍 Field Position", "🥅 Goal Line", "🔥 First Drive", "🧪 Custom Pivot Lab"
+        ])
 
-        p_data['Situation'] = p_data.apply(get_sit, axis=1)
+        with tabs[0]: # PERSONNEL/FORMATIONS
+            st.header("Formation & Personnel Identity")
+            c1, c2 = st.columns(2)
+            with c1:
+                st.subheader("Top 5 Formations")
+                f_top = p_data[cols['form']].value_counts().head(5).index
+                f_df = p_data[p_data[cols['form']].isin(f_top)]
+                f_res = f_df.groupby(cols['form'])[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+                st.dataframe(f_res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            with c2:
+                st.subheader("Top 5 Personnel")
+                p_top = p_data['PERSONNEL'].value_counts().head(5).index
+                p_res = p_data[p_data['PERSONNEL'].isin(p_top)].groupby('PERSONNEL')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+                st.dataframe(p_res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
 
-        # TAB LAYOUT
-        tabs = st.tabs(["📉 Situational Tells", "🎯 3rd Down Analytics", "🧪 Identity Pivot", "🤖 AI Intelligence"])
-
-        with tabs[0]: # SITUATIONAL TELLS (HEAT MAPS)
-            st.header("Down & Distance Play Tells")
-            dd = p_data.groupby('Situation')[cols['type']].value_counts().unstack().fillna(0)
-            if not dd.empty:
-                row_sums = dd.sum(axis=1, numeric_only=True)
-                dd['Run %'] = (dd['RUN'] / row_sums * 100).round(0).astype(int)
-                dd['Pass %'] = 100 - dd['Run %']
-                st.dataframe(dd.style.background_gradient(cmap='RdYlGn_r', subset=['Run %', 'Pass %']).format("{0}%", subset=['Run %', 'Pass %']))
-
-        with tabs[1]: # 3RD DOWN ANALYTICS
-            st.header("3rd Down Play Calls & Efficiency")
+        with tabs[1]: # 3RD DOWN
+            st.header("3rd Down Efficiency")
             t3 = p_data[p_data[cols['dn']] == 3].copy()
-            if not t3.empty:
-                c1, c2 = st.columns(2)
-                with c1:
-                    t3_mat = t3.groupby('Situation')[cols['type']].value_counts().unstack().fillna(0)
-                    r3_sum = t3_mat.sum(axis=1, numeric_only=True)
-                    t3_mat['Run %'] = (t3_mat['RUN'] / r3_sum * 100).round(0).astype(int)
-                    t3_mat['Pass %'] = 100 - t3_mat['Run %']
-                    st.table(t3_mat.style.format({"Run %": "{0}%", "Pass %": "{0}%"}))
-                with c2:
-                    st.subheader("3rd Down Concept Usage")
-                    st.table(t3[cols['play']].value_counts().head(5))
+            t3['Situation'] = t3[cols['dist']].apply(lambda x: "3rd & Short (1-3)" if x <= 3 else ("3rd & Mid (4-7)" if x <= 7 else "3rd & Long (7+)"))
+            t3_res = t3.groupby('Situation')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+            st.dataframe(t3_res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            st.subheader("Specific Play Concepts")
+            st.table(t3.groupby(['Situation', cols['play']]).size().unstack(fill_value=0))
 
-        with tabs[2]: # IDENTITY PIVOT [cite: 1014, 1020]
-            st.header("Personnel & Full Formation Usage")
-            st.subheader("Formation Usage (Off Form)")
-            st.table(p_data[cols['form']].value_counts().head(10).to_frame(name="Plays"))
-            
-            st.subheader("Personnel Group Distribution")
-            pers_dist = p_data.groupby('PERSONNEL')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
-            st.dataframe(pers_dist.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
-
-        with tabs[3]: # AI INTELLIGENCE (CONFIDENCE METER)
-            st.header("🤖 AI Scouting Intelligence")
-            
-            # Mid-Field Insight
-            if cols['field'] in df.columns:
-                mid = p_data[(p_data[cols['field']] >= 21) & (p_data[cols['field']] <= 50)]
-                if not mid.empty:
-                    rate = (mid[cols['type']] == 'RUN').mean() * 100
-                    st.subheader("Mid-Field Tendency (Own 21-50)")
-                    st.write(f"Offense runs the ball **{rate:.0f}%** of the time in this zone.")
-                    st.select_slider("Confidence Meter", options=["Low", "Medium", "High", "Lock"], value="High" if rate > 75 else "Medium", disabled=True)
-
+        with tabs[2]: # FREQUENCY & PATTERNS
+            st.header("Frequency & Play Patterns")
+            col_r, col_p = st.columns(2)
+            with col_r:
+                st.subheader("Most Frequent Runs")
+                st.table(p_data[p_data[cols['type']]=='RUN'][cols['play']].value_counts().head(5))
+            with col_p:
+                st.subheader("Most Frequent Passes")
+                st.table(p_data[p_data[cols['type']]=='PASS'][cols['play']].value_counts().head(5))
             st.divider()
-            st.subheader("First Down Pass Efficiency")
-            fd_pass = p_data[(p_data[cols['dn']] == 1) & (p_data[cols['type']] == 'PASS')]
-            if not fd_pass.empty:
-                st.metric("1st Down Pass Avg", f"{fd_pass[cols['gain']].mean():.1f} yds", help="Target Efficiency: 12.6 yds")
-                st.write(f"Backbone Passes: **Quick Pass, Play Action**")
+            st.subheader("Explosive Plays (Pass 20+, Run 10+)")
+            er = (p_data[p_data[cols['type']] == 'RUN'][cols['gain']] >= 10).mean() * 100
+            ep = (p_data[p_data[cols['type']] == 'PASS'][cols['gain']] >= 20).mean() * 100
+            st.write(f"Run Explosive Rate: **{er:.1f}%** | Pass Explosive Rate: **{ep:.1f}%**")
 
-            st.subheader("Explosive Pass Rate by Down")
-            pass_data = p_data[p_data[cols['type']] == 'PASS'].copy()
-            pass_data['Explosive'] = pass_data[cols['gain']] >= 20
-            st.table(pass_data.groupby(cols['dn'])['Explosive'].mean().mul(100).to_frame("% Explosive Rate").map("{:.0f}%".format))
+        with tabs[3]: # FIELD POSITION
+            st.header("Field Zone Tendencies")
+            def get_zone(yd):
+                if yd <= 20: return "Own 0-20"
+                if yd <= 50: return "Own 21-50"
+                return "Opp 49-21"
+            p_data['Zone'] = p_data[cols['field']].apply(get_zone)
+            zone_res = p_data.groupby('Zone')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+            st.dataframe(zone_res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
 
+        with tabs[4]: # GOAL LINE
+            st.header("Goal Line Analytics (Inside the 10)")
+            gl = p_data[p_data[cols['field']] >= 90].copy()
+            if not gl.empty:
+                st.subheader("Personnel Distribution")
+                st.table(gl['PERSONNEL'].value_counts())
+                st.subheader("Specific Plays by Yards to Go")
+                st.table(gl.groupby([cols['dist'], cols['play']]).size().unstack(fill_value=0))
+            else:
+                st.info("No goal-line plays detected.")
+
+        with tabs[5]: # FIRST DRIVE
+            st.header("First Drive Tendencies")
+            first = p_data[p_data[cols['series']] == 1]
+            if not first.empty:
+                st.write(f"Opening Concept: **{first.iloc[0][cols['play']]}**")
+                st.table(first[[cols['dn'], cols['dist'], cols['play'], cols['gain']]])
+
+        with tabs[6]: # CUSTOM PIVOT LAB
+            st.header("🧪 Custom Pivot Lab")
+            row_choice = st.selectbox("Analyze By:", ['Situation', 'PERSONNEL', cols['form'], cols['dn']])
+            metric = st.radio("Metric Selection:", ['Run/Pass %', 'Average Gain'])
+            if metric == 'Run/Pass %':
+                res = p_data.groupby(row_choice)[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+                st.dataframe(res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            else:
+                # FIXED: Converted to Frame to ensure .style availability
+                res = p_data.groupby(row_choice)[cols['gain']].mean().to_frame(name="Avg Gain")
+                st.dataframe(res.style.background_gradient(cmap='Greens').format("{:.1f} yds"))
     else:
-        st.error(f"Missing required columns: {list(cols.values())}")
+        st.error(f"Required columns missing: {list(cols.values())}")
