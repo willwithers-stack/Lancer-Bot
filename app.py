@@ -4,7 +4,7 @@ import re
 import os
 import numpy as np
 
-# --- 1. CORE SCORING LOGIC ---
+# --- 1. CORE LOGIC ---
 def process_offensive_logic(formation):
     f = str(formation).upper().strip()
     match = re.match(r'^(\d)(\d)', f)
@@ -38,7 +38,7 @@ with st.sidebar:
     if not found_logo:
         st.subheader("🏈 CARLSBAD FOOTBALL")
     st.write("---")
-    st.caption("v2.72 Unified Master Layout")
+    st.caption("v2.73 Whole Number Edition")
 
 st.title("🏈 Carlsbad Football Analytics")
 
@@ -56,7 +56,7 @@ if uploaded_file:
     }
     
     if all(cols[k] in df.columns for k in ['type', 'form', 'gain']):
-        # --- DATA CLEANING & DRIVE DETECTION ---
+        # --- DATA CLEANING ---
         df = df.dropna(subset=[cols['gain']])
         df[cols['gain']] = pd.to_numeric(df[cols['gain']], errors='coerce').fillna(0)
         df[cols['dn']] = pd.to_numeric(df[cols['dn']], errors='coerce').fillna(0).astype(int)
@@ -65,108 +65,81 @@ if uploaded_file:
         df[cols['type']] = df[cols['type']].astype(str).str.upper().str.strip()
         df['PERSONNEL'] = df[cols['form']].apply(process_offensive_logic)
         
-        # Drive detection (Heuristic)
-        st_keywords = ['PUNT', 'FG', 'KICK', 'PAT', 'FIELD GOAL']
-        df['Is_ST'] = df[cols['type']].apply(lambda x: any(kw in x for kw in st_keywords))
-        df['Drive_ID'] = ((df[cols['odk']] != df[cols['odk']].shift()) | (df['Is_ST'] == True)).cumsum()
-        
+        # --- REFINED SUCCESS LOGIC ---
+        def calculate_success(row):
+            dn = row[cols['dn']]
+            dist = row[cols['dist']]
+            gain = row[cols['gain']]
+            if dn == 1: return gain >= (dist * 0.45) # Midpoint of 40-50%
+            if dn == 2: return gain >= (dist * 0.65) # Midpoint of 60-70%
+            if dn in [3, 4]: return gain >= dist    # 100% required
+            return False
+
+        df['Is_Successful'] = df.apply(calculate_success, axis=1)
         p_data = df[df[cols['type']].isin(['RUN', 'PASS'])].copy()
 
-        # CENTRALIZED TAB DEFINITION
         tabs = st.tabs([
             "📊 Personnel/Formations", "🎯 3rd Down Strategy", "📈 Frequency & Patterns", 
             "🟢 Red/Green Zone", "🔮 Potpourri & AI", "🧪 Custom Pivot Lab"
         ])
 
-        # --- TAB 0: PERSONNEL ---
-        with tabs[0]:
-            st.header("📊 Personnel Identity")
-            eff = p_data.groupby('PERSONNEL')[cols['gain']].mean().to_frame(name="Avg Gain")
-            st.metric("Top Personnel Efficiency", f"{eff['Avg Gain'].max():.1f} yds")
-            c1, c2 = st.columns(2)
-            with c1: st.table(eff.style.background_gradient(cmap='Greens').format("{:.1f}"))
-            with c2: st.dataframe(p_data.groupby('PERSONNEL')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100).style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
-            for p in p_data['PERSONNEL'].unique():
-                with st.expander(f"Top Plays: {p} Personnel"):
-                    st.table(p_data[p_data['PERSONNEL'] == p][cols['play']].value_counts().head(3))
-
-        # --- TAB 1: 3RD DOWN ---
+        # --- TAB 1: 3RD DOWN (Whole Numbers) ---
         with tabs[1]:
             st.header("🎯 3rd Down Strategy")
             t3 = p_data[p_data[cols['dn']] == 3].copy()
             if not t3.empty:
-                t3['Success'] = t3[cols['gain']] >= t3[cols['dist']]
-                st.metric("Overall 3rd Down Success", f"{t3['Success'].mean()*100:.1f}%")
+                st.metric("Overall 3rd Down Success", f"{round(t3['Is_Successful'].mean()*100)}%")
                 t3['Sit'] = t3[cols['dist']].apply(lambda x: "3rd & Short (1-3)" if x <= 3 else ("3rd & Mid (4-7)" if x <= 7 else "3rd & Long (7+)"))
                 c1, c2 = st.columns(2)
-                with c1: st.table(t3.groupby('Sit').agg({'Success': 'mean'}).mul(100).round(1).rename(columns={'Success':'Success %'}))
-                with c2: st.dataframe(t3.groupby('Sit')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100).style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
-                for sit in ["3rd & Short (1-3)", "3rd & Mid (4-7)", "3rd & Long (7+)"]:
-                    sub = t3[t3['Sit'] == sit]
-                    if not sub.empty:
-                        with st.expander(f"Top Plays: {sit}"): st.table(sub[cols['play']].value_counts().head(3))
+                with c1:
+                    sit_succ = t3.groupby('Sit')['Is_Successful'].mean().mul(100).round(0).astype(int).to_frame(name="Success %")
+                    st.table(sit_succ)
+                with c2:
+                    t3_res = t3.groupby('Sit')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100).round(0).astype(int)
+                    st.dataframe(t3_res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
 
-        # --- TAB 2: FREQUENCY & PATTERNS (RESTORED) ---
+        # --- TAB 2: FREQUENCY (Whole Numbers) ---
         with tabs[2]:
-            st.header("📈 Frequency & Explosives")
+            st.header("📈 Frequency & Patterns")
             p_data['Exp'] = np.where((p_data[cols['type']] == 'RUN') & (p_data[cols['gain']] >= 10), True,
                             np.where((p_data[cols['type']] == 'PASS') & (p_data[cols['gain']] >= 20), True, False))
-            st.metric("Overall Explosive Rate", f"{p_data['Exp'].mean()*100:.1f}%")
-            c1, c2 = st.columns(2)
-            with c1:
-                st.write("**Top Plays (by Volume)**")
-                st.table(p_data[cols['play']].value_counts().head(5))
-            with c2:
-                st.write("**Explosive Rate by Down**")
-                exp_res = p_data.groupby([cols['dn'], cols['type']])['Exp'].mean().unstack().fillna(0).mul(100)
-                st.dataframe(exp_res.style.background_gradient(cmap='Greens').format("{:.1f}%"))
-            with st.expander("List of Home Run Plays (Yardage)"):
-                st.table(p_data[p_data['Exp'] == True][[cols['dn'], cols['dist'], cols['play'], cols['gain']]].sort_values(by=cols['gain'], ascending=False).head(10))
+            st.metric("Overall Explosive Rate", f"{round(p_data['Exp'].mean()*100)}%")
+            exp_res = p_data.groupby([cols['dn'], cols['type']])['Exp'].mean().unstack().fillna(0).mul(100).round(0).astype(int)
+            st.dataframe(exp_res.style.background_gradient(cmap='Greens').format("{:.0f}%"))
 
-        # --- TAB 3: RED/GREEN ZONE ---
-        with tabs[3]:
-            st.header("🟢 Red & Green Zone Strategy")
-            rg_data = p_data[p_data[cols['field']] > 0].copy()
-            if not rg_data.empty:
-                rg_data['Zone'] = rg_data[cols['field']].apply(lambda x: "🟢 Green Zone (<10)" if x <= 10 else "🔴 Red Zone (20-11)")
-                st.metric("RZ Efficiency (3+ Yds)", f"{(rg_data[cols['gain']] >= 3).mean()*100:.1f}%")
-                c1, c2 = st.columns(2)
-                with c1: st.table(rg_data['Zone'].value_counts())
-                with c2: st.dataframe(rg_data.groupby('Zone')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100).style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
-                for z in ["🔴 Red Zone (20-11)", "🟢 Green Zone (<10)"]:
-                    sub = rg_data[rg_data['Zone'] == z]
-                    if not sub.empty:
-                        with st.expander(f"Top Plays: {z}"): st.table(sub[cols['play']].value_counts().head(3))
-
-        # --- TAB 4: POTPOURRI & AI (RESTORED) ---
+        # --- TAB 4: POTPOURRI & AI (NEW SUCCESS METRIC) ---
         with tabs[4]:
-            st.header("🔮 AI Scouting Intelligence")
+            st.header("🔮 Potpourri: Sequence & Success")
+            # 1. Total Success Rate Metric
+            total_success = round(p_data['Is_Successful'].mean() * 100)
+            st.metric("Total Offensive Success Rate", f"{total_success}%")
+            st.caption("Success = 1D: 45% dist | 2D: 65% dist | 3D/4D: 100% dist")
+            
+            # 2. Success by Down Heatmap
+            dn_success = p_data.groupby(cols['dn'])['Is_Successful'].mean().mul(100).round(0).astype(int).to_frame(name="Success %")
+            st.table(dn_success)
+
+            # 3. AI Intelligence
+            st.divider()
             intel = []
             sack_mask = (df[cols['result']].str.contains('Sack', case=False, na=False)) | ((df[cols['type']] == 'PASS') & (df[cols['gain']] <= -4))
             post_sack = df.loc[[i+1 for i in df[sack_mask].index if i+1 in df.index]]
             if not post_sack.empty:
-                rate = (post_sack[cols['type']].str.upper() == 'RUN').mean() * 100
-                intel.append({"Category": "Sequence", "Insight": "Post-Sack Run Resp", "Stat": f"{rate:.0f}%", "Strength": get_stars(rate)})
-            
+                rate = round((post_sack[cols['type']].str.upper() == 'RUN').mean() * 100)
+                intel.append({"Category": "Sequence", "Insight": "Post-Sack Run Resp", "Stat": f"{rate}%", "Strength": get_stars(rate)})
             if intel: st.table(pd.DataFrame(intel))
-            
-            if cols['motion'] in p_data.columns and cols['p_dir'] in p_data.columns:
-                st.divider()
-                st.subheader("Motion Correlation Heatmap")
-                def check_c(row):
-                    m, p = str(row[cols['motion']]).upper(), str(row[cols['p_dir']]).upper()
-                    if m[0:1] == p[0:1] and m[0:1] in ['L','R']: return 'With Motion'
-                    if m[0:1] != p[0:1] and m[0:1] in ['L','R']: return 'Away from Motion'
-                    return 'Static'
-                p_data['M_Corr'] = p_data.apply(check_c, axis=1)
-                st.dataframe(p_data.groupby(['M_Corr', cols['type']]).size().unstack(fill_value=0).style.background_gradient(cmap='Purples'))
 
         # --- TAB 5: PIVOT LAB ---
         with tabs[5]:
             st.header("🧪 Custom Pivot Lab")
             row = st.selectbox("Group By:", ['PERSONNEL', cols['form'], cols['dn']])
-            res = p_data.groupby(row)[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
-            st.dataframe(res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            metric = st.radio("Metric:", ['Run/Pass %', 'Average Gain'])
+            if metric == 'Run/Pass %':
+                res = p_data.groupby(row)[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100).round(0).astype(int)
+                st.dataframe(res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            else:
+                res = p_data.groupby(row)[cols['gain']].mean().round(0).astype(int).to_frame(name="Avg Gain")
+                st.dataframe(res.style.background_gradient(cmap='Greens').format("{:d} yds"))
 
     else:
         st.error(f"Missing required columns: {list(cols.values())}")
