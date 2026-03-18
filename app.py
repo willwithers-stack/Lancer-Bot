@@ -38,7 +38,7 @@ with st.sidebar:
     if not found_logo:
         st.subheader("🏈 CARLSBAD FOOTBALL")
     st.write("---")
-    st.caption("v2.69 Intelligence + Success Metrics")
+    st.caption("v2.70 Tab Recovery")
 
 st.title("🏈 Carlsbad Football Analytics")
 
@@ -56,11 +56,8 @@ if uploaded_file:
     }
     
     if all(cols[k] in df.columns for k in ['type', 'form', 'gain']):
-        # --- DATA CLEANING ---
-        # 1. Throw out plays with blank gains
+        # --- DATA CLEANING (Throw out blank gains) ---
         df = df.dropna(subset=[cols['gain']])
-        
-        # 2. Force Numeric Types (Prevents TypeErrors in logs)
         df[cols['gain']] = pd.to_numeric(df[cols['gain']], errors='coerce').fillna(0)
         df[cols['dn']] = pd.to_numeric(df[cols['dn']], errors='coerce').fillna(0).astype(int)
         df[cols['dist']] = pd.to_numeric(df[cols['dist']], errors='coerce').fillna(0).astype(int)
@@ -68,8 +65,6 @@ if uploaded_file:
         
         df[cols['type']] = df[cols['type']].astype(str).str.upper().str.strip()
         df['PERSONNEL'] = df[cols['form']].apply(process_offensive_logic)
-        
-        # Define Offensive dataset
         p_data = df[df[cols['type']].isin(['RUN', 'PASS'])].copy()
 
         tabs = st.tabs([
@@ -81,54 +76,73 @@ if uploaded_file:
             "🧪 Custom Pivot Lab"
         ])
 
-        # --- TAB 1: 3RD DOWN (WITH SUCCESS RATE) ---
-        with tabs[1]:
+        with tabs[0]: # PERSONNEL/FORMATIONS
+            st.header("Formation & Personnel Identity")
+            c1, c2 = st.columns(2)
+            with c1:
+                st.subheader("Top 5 Formations Usage")
+                f_top = p_data[cols['form']].value_counts().head(5).index
+                # FIXED: numeric_only added to grouping to prevent blank output
+                f_res = p_data[p_data[cols['form']].isin(f_top)].groupby(cols['form'])[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+                st.dataframe(f_res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+            with c2:
+                st.subheader("Top 5 Personnel")
+                p_top = p_data['PERSONNEL'].value_counts().head(5).index
+                p_res = p_data[p_data['PERSONNEL'].isin(p_top)].groupby('PERSONNEL')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+                st.dataframe(p_res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+
+        with tabs[1]: # 3RD DOWN (UNCHANGED LAYOUT)
             st.header("🎯 3rd Down Situational Analysis")
             t3 = p_data[p_data[cols['dn']] == 3].copy()
             if not t3.empty:
-                # Success Logic: Gain >= Distance
                 t3['Success'] = t3[cols['gain']] >= t3[cols['dist']]
-                overall_success = t3['Success'].mean() * 100
-                st.metric("Overall 3rd Down Success Rate", f"{overall_success:.1f}%")
+                st.metric("Overall 3rd Down Success Rate", f"{t3['Success'].mean() * 100:.1f}%")
                 
                 t3['Sit'] = t3[cols['dist']].apply(lambda x: "3rd & Short (1-3)" if x <= 3 else ("3rd & Mid (4-7)" if x <= 7 else "3rd & Long (7+)"))
-                
-                # Success by bucket
                 sit_stats = t3.groupby('Sit').agg({'Success': 'mean'}).mul(100).round(1)
-                st.table(sit_stats.rename(columns={'Success': 'Success %'}))
                 
-                # Top Plays expanders
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.table(sit_stats.rename(columns={'Success': 'Success %'}))
+                with c2:
+                    t3_tendency = t3.groupby('Sit')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+                    st.dataframe(t3_tendency.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+                
                 for sit in ["3rd & Short (1-3)", "3rd & Mid (4-7)", "3rd & Long (7+)"]:
                     subset = t3[t3['Sit'] == sit]
                     if not subset.empty:
                         with st.expander(f"Top Plays: {sit}"):
                             st.table(subset[cols['play']].value_counts().head(3))
 
-        # --- TAB 4: AI INTELLIGENCE (POST-SACK/PENALTY) ---
-        with tabs[4]:
+        with tabs[2]: # FREQUENCY & PATTERNS
+            st.header("Frequency & Explosives")
+            p_data['Explosive'] = np.where(
+                (p_data[cols['type']] == 'RUN') & (p_data[cols['gain']] >= 10), True,
+                np.where((p_data[cols['type']] == 'PASS') & (p_data[cols['gain']] >= 20), True, False)
+            )
+            # FIXED: Avoid FutureWarning by using explicit selection
+            exp_table = p_data.groupby([cols['dn'], cols['type']])['Explosive'].mean().unstack().fillna(0).mul(100)
+            st.dataframe(exp_table.style.background_gradient(cmap='Greens').format("{:.1f}%"))
+
+        with tabs[4]: # POTPOURRI & AI
             st.header("🤖 AI Scouting Intelligence")
             intel_data = []
-            
-            # Post-Sack Response Logic
+            # Post-Sack Response
             sack_mask = (df[cols['result']].str.contains('Sack', case=False, na=False)) | \
                         ((df[cols['type']] == 'PASS') & (df[cols['gain']] <= -4))
-            sack_indices = df[sack_mask].index
-            post_sack_plays = df.loc[[i+1 for i in sack_indices if i+1 in df.index]]
-            
-            if not post_sack_plays.empty:
-                run_resp = (post_sack_plays[cols['type']].str.upper() == 'RUN').mean() * 100
+            post_sack = df.loc[[i+1 for i in df[sack_mask].index if i+1 in df.index]]
+            if not post_sack.empty:
+                run_resp = (post_sack[cols['type']].str.upper() == 'RUN').mean() * 100
                 intel_data.append({"Category": "Sequence", "Insight": "Post-Sack Run Resp", "Stat": f"{run_resp:.0f}%", "Strength": get_stars(run_resp)})
-
-            # Post-Penalty Response Logic
-            penalty_mask = (df[cols['type']].str.contains('PENALTY', case=False, na=False))
-            pen_indices = df[penalty_mask].index
-            post_pen_plays = df.loc[[i+1 for i in pen_indices if i+1 in df.index]]
             
-            if not post_pen_plays.empty:
-                run_resp_pen = (post_pen_plays[cols['type']].str.upper() == 'RUN').mean() * 100
-                intel_data.append({"Category": "Sequence", "Insight": "Post-Penalty Run Resp", "Stat": f"{run_resp_pen:.0f}%", "Strength": get_stars(run_resp_pen)})
-
             if intel_data:
                 st.table(pd.DataFrame(intel_data))
 
-        # (Other tabs follow same stable structure...)
+        with tabs[5]: # PIVOT LAB
+            st.header("🧪 Custom Pivot Lab")
+            row_choice = st.selectbox("Group By Selection:", ['PERSONNEL', cols['form'], cols['dn']])
+            res = p_data.groupby(row_choice)[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100)
+            st.dataframe(res.style.background_gradient(cmap='RdYlGn_r').format("{:.0f}%"))
+
+    else:
+        st.error(f"Missing required columns: {list(cols.values())}")
