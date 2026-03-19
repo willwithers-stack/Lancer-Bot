@@ -1013,12 +1013,18 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
         # ── TAB 8: SCOUT REPORT ──────────────────────────────
         with tabs[8]:
             st.header("🕵️ Opponent Scout Report")
-            st.caption("Auto-generated executive overview based on FormationIQ analysis. Use this as your coaching staff briefing.")
-            st.divider()
-            for section_title, section_body in scout_sections:
-                st.subheader(section_title)
-                st.markdown(section_body)
-                st.divider()
+    
+    # TEMP DEBUG — remove after fixing
+    st.write({
+        "fd_rate": round(p_data['Is_FD'].mean()*100),
+        "succ_rt": round(p_data['Is_Succ'].mean()*100),
+        "exp_rt":  round(p_data['Is_Explosive'].mean()*100),
+        "avg_dls": round(drive_dla['DLS'].mean(), 2) if not drive_dla.empty else 0,
+        "avg_gain": round(p_data[cols['gain']].mean(), 1),
+    })
+    # END TEMP DEBUG
+    
+    st.caption("Auto-generated executive overview...")
 
     else:
         st.error(f"Missing required columns: {list(cols.values())}")
