@@ -9,17 +9,509 @@ from io import BytesIO
 # EXCEL EXPORT
 # ============================================================
 
-def build_excel_export(export_dict):
+   def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
+                       fei_df, dir_fei, fpar_df, sss_summary,
+                       sss_by_form, chain, intel_df, scout_sections,
+                       cols, verdict_score):
+
+    from openpyxl import Workbook
+    from openpyxl.styles import (PatternFill, Font, Alignment, Border, Side,
+                                  GradientFill)
+    from openpyxl.utils import get_column_letter
+    from openpyxl.utils.dataframe import dataframe_to_rows
+
+    wb = Workbook()
+    wb.remove(wb.active)
+
+    # ── COLOR PALETTE ──────────────────────────────────────
+    RED    = "C0392B"
+    YELLOW = "F39C12"
+    GREEN  = "27AE60"
+    DARK   = "1C2833"
+    MED    = "2E4057"
+    LIGHT  = "D6EAF8"
+    WHITE  = "FFFFFF"
+    GRAY   = "F2F3F4"
+    BORDER = "BDC3C7"
+
+    grade_colors = {
+        'A': ('1E8449', WHITE),
+        'B': ('27AE60', WHITE),
+        'C': ('F39C12', WHITE),
+        'D': ('E67E22', WHITE),
+        'F': ('C0392B', WHITE),
+    }
+
+    def make_fill(hex_color):
+        return PatternFill("solid", fgColor=hex_color)
+
+    def make_font(bold=False, color=WHITE, size=11):
+        return Font(bold=bold, color=color, size=size, name='Calibri')
+
+    def make_border():
+        s = Side(style='thin', color=BORDER)
+        return Border(left=s, right=s, top=s, bottom=s)
+
+    def make_align(wrap=False, h='left', v='center'):
+        return Alignment(horizontal=h, vertical=v, wrap_text=wrap)
+
+    def set_col_width(ws, col, width):
+        ws.column_dimensions[get_column_letter(col)].width = width
+
+    def header_row(ws, row_num, values, bg=DARK, fg=WHITE, bold=True, sizes=None):
+        for i, val in enumerate(values, 1):
+            c = ws.cell(row=row_num, column=i, value=val)
+            c.fill    = make_fill(bg)
+            c.font    = Font(bold=bold, color=fg, size=sizes[i-1] if sizes else 11, name='Calibri')
+            c.alignment = make_align(h='center')
+            c.border  = make_border()
+
+    def data_row(ws, row_num, values, bg=WHITE, fg='000000', bold=False, wrap=False):
+        for i, val in enumerate(values, 1):
+            c = ws.cell(row=row_num, column=i, value=val)
+            c.fill      = make_fill(bg)
+            c.font      = Font(bold=bold, color=fg, size=10, name='Calibri')
+            c.alignment = make_align(wrap=wrap)
+            c.border    = make_border()
+
+    def section_title(ws, row_num, title, ncols, bg=MED):
+        ws.merge_cells(start_row=row_num, start_column=1,
+                       end_row=row_num, end_column=ncols)
+        c = ws.cell(row=row_num, column=1, value=title)
+        c.fill      = make_fill(bg)
+        c.font      = Font(bold=True, color=WHITE, size=12, name='Calibri')
+        c.alignment = make_align(h='center')
+
+    def grade_cell(ws, row, col, grade):
+        bg, fg = grade_colors.get(str(grade), ('FFFFFF', '000000'))
+        c = ws.cell(row=row, column=col, value=grade)
+        c.fill      = make_fill(bg)
+        c.font      = Font(bold=True, color=fg, size=10, name='Calibri')
+        c.alignment = make_align(h='center')
+        c.border    = make_border()
+
+    total    = len(p_data)
+    runs     = (p_data[cols['type']] == 'RUN').sum()
+    passes   = (p_data[cols['type']] == 'PASS').sum()
+    run_pct  = round(runs / total * 100) if total else 0
+    pass_pct = round(passes / total * 100) if total else 0
+    avg_gain = round(p_data[cols['gain']].mean(), 1)
+    fd_rate  = round(p_data['Is_FD'].mean() * 100)
+    succ_rt  = round(p_data['Is_Succ'].mean() * 100)
+    exp_rt   = round(p_data['Is_Explosive'].mean() * 100)
+
+    if verdict_score >= 7:
+        verdict_text  = "HIGH THREAT"
+        verdict_color = RED
+    elif verdict_score >= 4:
+        verdict_text  = "MODERATE THREAT"
+        verdict_color = YELLOW
+    else:
+        verdict_text  = "MANAGEABLE"
+        verdict_color = GREEN
+
+    # ══════════════════════════════════════════════════════
+    # SHEET 1 — EXECUTIVE SUMMARY
+    # ══════════════════════════════════════════════════════
+    ws1 = wb.create_sheet("1 - Executive Summary")
+    ws1.sheet_view.showGridLines = False
+
+    # Title banner
+    ws1.merge_cells("A1:H1")
+    c = ws1["A1"]
+    c.value     = "FormationIQ — Opponent Scouting Report"
+    c.fill      = make_fill(DARK)
+    c.font      = Font(bold=True, color=WHITE, size=18, name='Calibri')
+    c.alignment = make_align(h='center')
+    ws1.row_dimensions[1].height = 36
+
+    # Verdict banner
+    ws1.merge_cells("A2:H2")
+    c = ws1["A2"]
+    c.value     = f"SCOUTING VERDICT: {verdict_text}"
+    c.fill      = make_fill(verdict_color)
+    c.font      = Font(bold=True, color=WHITE, size=14, name='Calibri')
+    c.alignment = make_align(h='center')
+    ws1.row_dimensions[2].height = 28
+
+    # Key stats header
+    r = 4
+    section_title(ws1, r, "KEY OFFENSIVE METRICS", 8)
+    ws1.row_dimensions[r].height = 22
+
+    r = 5
+    header_row(ws1, r,
+               ["Total Plays","Run Plays","Pass Plays","Run %","Pass %",
+                "Avg Gain","FD Rate","Success Rate"])
+    r = 6
+    data_row(ws1, r,
+             [total, int(runs), int(passes), f"{run_pct}%", f"{pass_pct}%",
+              f"{avg_gain} yds", f"{fd_rate}%", f"{succ_rt}%"],
+             bg=LIGHT, fg='000000', bold=True)
+
+    for col in range(1, 9):
+        set_col_width(ws1, col, 14)
+
+    # Top formations
+    r = 8
+    section_title(ws1, r, "TOP FORMATIONS BY VOLUME", 4)
+    r = 9
+    header_row(ws1, r, ["Formation","Plays","Avg Gain","FD Rate %"], bg=MED)
+    top_forms = (
+        p_data.groupby(cols['form'])
+        .agg(Plays=(cols['gain'],'count'), Avg_Gain=(cols['gain'],'mean'), FD_Rate=('Is_FD','mean'))
+        .sort_values('Plays', ascending=False).head(5)
+    )
+    for i, (form, row) in enumerate(top_forms.iterrows()):
+        r += 1
+        bg = GRAY if i % 2 == 0 else WHITE
+        data_row(ws1, r, [form, int(row['Plays']),
+                          round(row['Avg_Gain'], 1),
+                          f"{round(row['FD_Rate']*100)}%"], bg=bg, fg='000000')
+
+    set_col_width(ws1, 1, 22)
+    set_col_width(ws1, 2, 10)
+    set_col_width(ws1, 3, 12)
+    set_col_width(ws1, 4, 12)
+
+    # Top chain movers
+    r += 2
+    section_title(ws1, r, "TOP CHAIN-MOVING PLAYS", 4)
+    r += 1
+    header_row(ws1, r, ["Play","Plays","FD Rate %","Success Rate %"], bg=MED)
+    for i, (play, row) in enumerate(chain.head(5).iterrows()):
+        r += 1
+        bg = GRAY if i % 2 == 0 else WHITE
+        data_row(ws1, r, [play, int(row['Plays']),
+                          f"{row['FD Rate %']}%",
+                          f"{row['Success Rate %']}%"], bg=bg, fg='000000')
+
+    # Top exploits
+    r += 2
+    section_title(ws1, r, "TOP DEFENSIVE EXPLOITS", 5)
+    r += 1
+    header_row(ws1, r, ["Category","Finding","Action","Stat","Priority"], bg=MED)
+    exploits = []
+    if not fei_df.empty:
+        bad_fei = fei_df[fei_df['FEI_Grade'].isin(['D','F'])].head(2)
+        for idx, row in bad_fei.iterrows():
+            exploits.append([
+                "FEI",
+                f"{idx[0]} ({idx[1]}) — FEI Grade {row['FEI_Grade']}",
+                "Let them run this — they underperform their situation",
+                f"FEI: {row['FEI']}",
+                "HIGH"
+            ])
+    if not sss_summary.empty:
+        top_sss = sss_summary.sort_values('Stress %', ascending=False).iloc[0]
+        exploits.append([
+            "SSS",
+            f"{top_sss.name} creates {int(top_sss['Stress %'])}% of stress situations",
+            f"Stop their {top_sss.name.lower()} on early downs",
+            f"Avg prior gain: {round(top_sss['Avg_Prior_Gain'],1)} yds",
+            "HIGH"
+        ])
+    if not intel_df.empty:
+        for _, row in intel_df.head(3).iterrows():
+            exploits.append([
+                row['Category'],
+                row['Signal'],
+                row['Coaching Note'],
+                row['Stat'],
+                "MED"
+            ])
+    for i, exp in enumerate(exploits[:6]):
+        r += 1
+        bg = GRAY if i % 2 == 0 else WHITE
+        data_row(ws1, r, exp, bg=bg, fg='000000', wrap=True)
+        ws1.row_dimensions[r].height = 40
+
+    set_col_width(ws1, 1, 12)
+    set_col_width(ws1, 2, 35)
+    set_col_width(ws1, 3, 45)
+    set_col_width(ws1, 4, 16)
+    set_col_width(ws1, 5, 10)
+
+    # ══════════════════════════════════════════════════════
+    # SHEET 2 — FORMATION FEI
+    # ══════════════════════════════════════════════════════
+    ws2 = wb.create_sheet("2 - Formation FEI")
+    ws2.sheet_view.showGridLines = False
+
+    ws2.merge_cells("A1:8")
+    c = ws2["A1"]
+    c.value     = "Formation Efficiency Index (FEI) — Actual Gain vs Expected Gain by Situation"
+    c.fill      = make_fill(DARK)
+    c.font      = Font(bold=True, color=WHITE, size=14, name='Calibri')
+    c.alignment = make_align(h='center')
+    ws2.row_dimensions[1].height = 28
+    ws2.merge_cells("A1:H1")
+
+    note_row = 2
+    ws2.merge_cells(f"A{note_row}:H{note_row}")
+    c = ws2.cell(row=note_row, column=1,
+                 value="FEI > 1.0 = Outperforming situation | FEI < 1.0 = Underperforming | Grade: A≥1.4  B≥1.1  C≥0.9  D≥0.7  F<0.7 | Std FEI = Standard downs | PD FEI = Passing downs (2nd & 8+, 3rd & 5+)")
+    c.fill      = make_fill(LIGHT)
+    c.font      = Font(italic=True, color='000000', size=9, name='Calibri')
+    c.alignment = make_align(wrap=True, h='left')
+    ws2.row_dimensions[note_row].height = 30
+
+    for play_type, label in [('RUN', '🏃 RUN FORMATIONS'), ('PASS', '🎯 PASS FORMATIONS')]:
+        if play_type not in fei_df.index.get_level_values(1):
+            continue
+        sub = fei_df.xs(play_type, level=1).reset_index()
+        r = ws2.max_row + 2
+        section_title(ws2, r, label, 8, bg=MED)
+        ws2.row_dimensions[r].height = 22
+        r += 1
+        header_row(ws2, r,
+                   ["Formation","Plays","Avg Gain","Avg Expected",
+                    "FEI","Grade","Std FEI","Pass Down FEI"], bg=DARK)
+        for i, row in sub.iterrows():
+            r += 1
+            bg = GRAY if i % 2 == 0 else WHITE
+            data_row(ws2, r,
+                     [row[cols['form']], int(row['Plays']),
+                      row['Avg_Gain'], row['Avg_Expected'],
+                      row['FEI'], '', row['Std_FEI'], row['PD_FEI']],
+                     bg=bg, fg='000000')
+            grade_cell(ws2, r, 6, row['FEI_Grade'])
+
+    for col, w in zip(range(1, 9), [24, 8, 12, 14, 8, 8, 10, 14]):
+        set_col_width(ws2, col, w)
+
+    # ══════════════════════════════════════════════════════
+    # SHEET 3 — PLAY DIRECTION FEI
+    # ══════════════════════════════════════════════════════
+    ws3 = wb.create_sheet("3 - Play Direction FEI")
+    ws3.sheet_view.showGridLines = False
+
+    ws3.merge_cells("A1:G1")
+    c = ws3["A1"]
+    c.value     = "FEI by Play Direction — Which Direction Are They Attacking and Is It Working?"
+    c.fill      = make_fill(DARK)
+    c.font      = Font(bold=True, color=WHITE, size=14, name='Calibri')
+    c.alignment = make_align(h='center')
+    ws3.row_dimensions[1].height = 28
+
+    if not dir_fei.empty:
+        for play_type, label in [('RUN', '🏃 RUN DIRECTION'), ('PASS', '🎯 PASS DIRECTION')]:
+            if play_type not in dir_fei.index.get_level_values(1):
+                continue
+            sub = dir_fei.xs(play_type, level=1).reset_index()
+            r = ws3.max_row + 2
+            section_title(ws3, r, label, 7, bg=MED)
+            r += 1
+            header_row(ws3, r,
+                       ["Formation","Direction","Plays","Avg Gain",
+                        "Avg Expected","FEI","Grade"], bg=DARK)
+            for i, row in sub.iterrows():
+                r += 1
+                bg = GRAY if i % 2 == 0 else WHITE
+                data_row(ws3, r,
+                         [row[cols['form']], row['Dir'], int(row['Plays']),
+                          row['Avg_Gain'], row['Avg_Expected'], row['FEI'], ''],
+                         bg=bg, fg='000000')
+                grade_cell(ws3, r, 7, row['Grade'])
+
+    for col, w in zip(range(1, 8), [24, 10, 8, 12, 14, 8, 8]):
+        set_col_width(ws3, col, w)
+
+    # ══════════════════════════════════════════════════════
+    # SHEET 4 — PERSONNEL ANALYSIS
+    # ══════════════════════════════════════════════════════
+    ws4 = wb.create_sheet("4 - Personnel Analysis")
+    ws4.sheet_view.showGridLines = False
+
+    ws4.merge_cells("A1:J1")
+    c = ws4["A1"]
+    c.value     = "Personnel Group Analysis — Drive Leverage, Efficiency & Tendencies"
+    c.fill      = make_fill(DARK)
+    c.font      = Font(bold=True, color=WHITE, size=14, name='Calibri')
+    c.alignment = make_align(h='center')
+    ws4.row_dimensions[1].height = 28
+
+    if not pers_dla.empty:
+        r = 3
+        section_title(ws4, r, "PERSONNEL LEVERAGE PROFILE", 10, bg=MED)
+        r += 1
+        header_row(ws4, r,
+                   ["Personnel","Plays","DLS","Grade","Avg Gain",
+                    "FD Rate %","Success %","Run %","Pass %","Explosive %"],
+                   bg=DARK)
+        for i, (pers, row) in enumerate(pers_dla.sort_values('Plays', ascending=False).iterrows()):
+            r += 1
+            bg = GRAY if i % 2 == 0 else WHITE
+            data_row(ws4, r,
+                     [pers, int(row['Plays']), row['DLS'], '',
+                      row['Avg_Gain'], f"{row['FD_Rate']}%",
+                      f"{row['Success_Rate']}%", f"{row['Run%']}%",
+                      f"{row['Pass%']}%", f"{row['Explosive_Rt']}%"],
+                     bg=bg, fg='000000')
+            grade_cell(ws4, r, 4, row['DLS_Grade'])
+
+    for col, w in zip(range(1, 11), [12, 8, 8, 8, 10, 10, 10, 8, 8, 12]):
+        set_col_width(ws4, col, w)
+
+    # ══════════════════════════════════════════════════════
+    # SHEET 5 — SITUATIONAL BREAKDOWNS
+    # ══════════════════════════════════════════════════════
+    ws5 = wb.create_sheet("5 - Situational Breakdowns")
+    ws5.sheet_view.showGridLines = False
+
+    ws5.merge_cells("A1:F1")
+    c = ws5["A1"]
+    c.value     = "Situational Analysis — 3rd Down, Red Zone & Field Position"
+    c.fill      = make_fill(DARK)
+    c.font      = Font(bold=True, color=WHITE, size=14, name='Calibri')
+    c.alignment = make_align(h='center')
+    ws5.row_dimensions[1].height = 28
+
+    # 3rd down
+    t3 = p_data[p_data[cols['dn']] == 3].copy()
+    if not t3.empty:
+        t3['Sit'] = t3[cols['dist']].apply(
+            lambda x: "3rd & Short (1-3)" if x <= 3 else
+                      ("3rd & Mid (4-7)" if x <= 7 else "3rd & Long (7+)")
+        )
+        r = 3
+        section_title(ws5, r, "3RD DOWN EFFICIENCY", 5, bg=MED)
+        r += 1
+        header_row(ws5, r,
+                   ["Situation","Plays","Conv Rate %","Run %","Pass %"],
+                   bg=DARK)
+        for sit in ["3rd & Short (1-3)", "3rd & Mid (4-7)", "3rd & Long (7+)"]:
+            sub = t3[t3['Sit'] == sit]
+            if not sub.empty:
+                r += 1
+                run_p  = round((sub[cols['type']] == 'RUN').mean() * 100)
+                pass_p = round((sub[cols['type']] == 'PASS').mean() * 100)
+                data_row(ws5, r,
+                         [sit, len(sub),
+                          f"{round(sub['Is_FD'].mean()*100)}%",
+                          f"{run_p}%", f"{pass_p}%"],
+                         bg=GRAY, fg='000000')
+
+    # FPAR
+    if not fpar_df.empty:
+        r = ws5.max_row + 2
+        section_title(ws5, r, "FIELD POSITION AGGRESSION (FPAR)", 6, bg=MED)
+        r += 1
+        fpar_reset = fpar_df.reset_index()
+        cols_fpar  = ['Field_Zone', cols['dn'], 'Plays', 'Pass_Rate', 'Success_Rate', 'Avg_Gain']
+        header_row(ws5, r,
+                   ["Zone","Down","Plays","Pass Rate %","Success Rate %","Avg Gain"],
+                   bg=DARK)
+        for i, row in fpar_reset.iterrows():
+            r += 1
+            bg = GRAY if i % 2 == 0 else WHITE
+            data_row(ws5, r,
+                     [row['Field_Zone'], int(row[cols['dn']]),
+                      int(row['Plays']), f"{row['Pass_Rate']}%",
+                      f"{row['Success_Rate']}%", row['Avg_Gain']],
+                     bg=bg, fg='000000')
+
+    for col, w in zip(range(1, 7), [28, 8, 8, 12, 14, 10]):
+        set_col_width(ws5, col, w)
+
+    # ══════════════════════════════════════════════════════
+    # SHEET 6 — AI SCOUTING INTELLIGENCE
+    # ══════════════════════════════════════════════════════
+    ws6 = wb.create_sheet("6 - AI Scouting Intelligence")
+    ws6.sheet_view.showGridLines = False
+
+    ws6.merge_cells("A1:D1")
+    c = ws6["A1"]
+    c.value     = "AI Scouting Intelligence — Auto-Detected Behavioral Patterns & Tendencies"
+    c.fill      = make_fill(DARK)
+    c.font      = Font(bold=True, color=WHITE, size=14, name='Calibri')
+    c.alignment = make_align(h='center')
+    ws6.row_dimensions[1].height = 28
+
+    if not intel_df.empty:
+        r = 3
+        current_cat = None
+        header_row(ws6, r,
+                   ["Category","Signal","Stat","Coaching Note"],
+                   bg=DARK)
+        for i, row in intel_df.iterrows():
+            r += 1
+            if row['Category'] != current_cat:
+                current_cat = row['Category']
+                bg = LIGHT
+            else:
+                bg = WHITE
+            data_row(ws6, r,
+                     [row['Category'], row['Signal'],
+                      row['Stat'], row['Coaching Note']],
+                     bg=bg, fg='000000', wrap=True)
+            ws6.row_dimensions[r].height = 50
+
+    for col, w in zip(range(1, 5), [14, 30, 20, 60]):
+        set_col_width(ws6, col, w)
+
+    # ══════════════════════════════════════════════════════
+    # SHEET 7 — SCOUT REPORT
+    # ══════════════════════════════════════════════════════
+    ws7 = wb.create_sheet("7 - Scout Report")
+    ws7.sheet_view.showGridLines = False
+
+    ws7.merge_cells("A1:B1")
+    c = ws7["A1"]
+    c.value     = "FormationIQ — Full Scouting Report"
+    c.fill      = make_fill(DARK)
+    c.font      = Font(bold=True, color=WHITE, size=16, name='Calibri')
+    c.alignment = make_align(h='center')
+    ws7.row_dimensions[1].height = 32
+
+    r = 2
+    for section_title_text, section_body in scout_sections:
+        r += 1
+        ws7.merge_cells(f"A{r}:B{r}")
+        c = ws7.cell(row=r, column=1, value=section_title_text)
+        c.fill      = make_fill(MED)
+        c.font      = Font(bold=True, color=WHITE, size=12, name='Calibri')
+        c.alignment = make_align(h='left')
+        ws7.row_dimensions[r].height = 24
+
+        r += 1
+        clean_body = re.sub(r'\*\*|__', '', str(section_body)).strip()
+        ws7.merge_cells(f"A{r}:B{r}")
+        c = ws7.cell(row=r, column=1, value=clean_body)
+        c.fill      = make_fill(WHITE)
+        c.font      = Font(color='000000', size=10, name='Calibri')
+        c.alignment = make_align(wrap=True, h='left', v='top')
+        line_count  = max(clean_body.count('\n') + 1, 3)
+        ws7.row_dimensions[r].height = min(line_count * 15, 200)
+        r += 1
+
+    ws7.column_dimensions['A'].width = 40
+    ws7.column_dimensions['B'].width = 80
+
+    # ══════════════════════════════════════════════════════
+    # SHEET 8 — RAW PLAY-BY-PLAY
+    # ══════════════════════════════════════════════════════
+    ws8 = wb.create_sheet("8 - Play by Play")
+    ws8.sheet_view.showGridLines = True
+    ws8.auto_filter.ref = f"A1:{get_column_letter(len(p_data.columns))}{len(p_data)+1}"
+
+    header_row(ws8, 1, list(p_data.columns), bg=DARK)
+    for i, row_data in enumerate(p_data.values, 2):
+        bg = GRAY if i % 2 == 0 else WHITE
+        for j, val in enumerate(row_data, 1):
+            c = ws8.cell(row=i, column=j, value=val)
+            c.fill      = make_fill(bg)
+            c.font      = Font(color='000000', size=9, name='Calibri')
+            c.alignment = make_align()
+            c.border    = make_border()
+
+    for col_idx in range(1, len(p_data.columns) + 1):
+        set_col_width(ws8, col_idx, 14)
+
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        for sheet_name, df in export_dict.items():
-            if df is not None and not df.empty:
-                df.reset_index().to_excel(
-                    writer,
-                    sheet_name=sheet_name[:31],
-                    index=False
-                )
+    wb.save(output)
     return output.getvalue()
+
 
 
 # ============================================================
