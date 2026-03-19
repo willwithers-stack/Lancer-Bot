@@ -1540,12 +1540,20 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                         st.write("**🏃 Run Direction**")
                         run_dir = dir_fei.xs('RUN', level=1) if 'RUN' in dir_fei.index.get_level_values(1) else pd.DataFrame()
                         if not run_dir.empty:
-                            st.dataframe(run_dir[['Plays','Avg_Gain','FEI','Grade']].style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
+                            rd = run_dir[['Plays','Avg_Gain','FEI','Grade']].copy()
+                            rd['Plays']    = rd['Plays'].astype(int)
+                            rd['Avg_Gain'] = rd['Avg_Gain'].astype(float)
+                            rd['FEI']      = pd.to_numeric(rd['FEI'], errors='coerce')
+                            st.dataframe(rd.style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
                     with c2:
                         st.write("**🎯 Pass Direction**")
                         pass_dir = dir_fei.xs('PASS', level=1) if 'PASS' in dir_fei.index.get_level_values(1) else pd.DataFrame()
                         if not pass_dir.empty:
-                            st.dataframe(pass_dir[['Plays','Avg_Gain','FEI','Grade']].style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
+                            pd2 = pass_dir[['Plays','Avg_Gain','FEI','Grade']].copy()
+                            pd2['Plays']    = pd2['Plays'].astype(int)
+                            pd2['Avg_Gain'] = pd2['Avg_Gain'].astype(float)
+                            pd2['FEI']      = pd.to_numeric(pd2['FEI'], errors='coerce')
+                            st.dataframe(pd2.style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
             else:
                 st.info("Not enough play volume for FEI (min 4 plays per formation/type).")
 
