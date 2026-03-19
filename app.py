@@ -467,7 +467,6 @@ else:
 
 lines.append(("🎯 Overall Scouting Verdict", verdict))
 return lines
-    return lines
 
 
 # ============================================================
