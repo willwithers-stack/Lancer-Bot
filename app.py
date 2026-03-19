@@ -5,27 +5,76 @@ import os
 import numpy as np
 
 # ============================================================
+# GOOGLE SHEETS EXPORT
+# ============================================================
+
+try:
+    import gspread
+    from gspread_dataframe import set_with_dataframe
+    from google.oauth2.service_account import Credentials
+    SHEETS_ENABLED = True
+except ImportError:
+    SHEETS_ENABLED = False
+
+
+def push_df_to_sheet(df, worksheet_name="Report"):
+    conf = st.secrets["google_service"]
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    creds = Credentials.from_service_account_info(conf, scopes=scopes)
+    gc = gspread.authorize(creds)
+    sh = gc.open_by_key(conf["sheet_id"])
+    try:
+        ws = sh.worksheet(worksheet_name)
+    except gspread.WorksheetNotFound:
+        ws = sh.add_worksheet(title=worksheet_name, rows=2000, cols=50)
+    ws.clear()
+    set_with_dataframe(ws, df.reset_index())
+
+
+# ============================================================
 # HELPER FUNCTIONS
 # ============================================================
 
-def classify_leverage(dn, dist):
+def classify_leverage(dn, dist, yard_ln=None):
     try:
         d, y = int(dn), int(dist)
     except (ValueError, TypeError):
         return "Unknown", 0
+
     if d == 1:
-        if y <= 5:  return "High", 2
-        elif y <= 10: return "Med", 1
-        else:         return "Low", -1
-    if d == 2:
-        if y <= 3:  return "High", 2
-        elif y <= 7:  return "Med", 1
-        else:         return "Low", -1
-    if d in (3, 4):
-        if y <= 2:  return "High", 2
-        elif y <= 6:  return "Med", 0
-        else:         return "Low", -2
-    return "Unknown", 0
+        if y <= 5:    base = 2
+        elif y <= 10: base = 1
+        else:         base = -1
+    elif d == 2:
+        if y <= 3:    base = 2
+        elif y <= 7:  base = 1
+        else:         base = -1
+    elif d in (3, 4):
+        if y <= 2:    base = 2
+        elif y <= 6:  base = 0
+        else:         base = -2
+    else:
+        return "Unknown", 0
+
+    modifier = 0.0
+    if yard_ln is not None:
+        try:
+            yl = int(yard_ln)
+            if 1 <= yl <= 20:  modifier = +0.5
+            elif yl <= -30:    modifier = -0.5
+        except (ValueError, TypeError):
+            pass
+
+    score = base + modifier
+    if score >= 1.5:    band = "High"
+    elif score >= 0.5:  band = "Med"
+    elif score >= -0.5: band = "Neutral"
+    else:               band = "Low"
+
+    return band, round(score, 1)
 
 
 def process_offensive_logic(formation):
@@ -33,10 +82,10 @@ def process_offensive_logic(formation):
     match = re.match(r'^(\d)(\d)', f)
     if match:
         return f"{match.group(1)}{match.group(2)}"
-    if any(x in f for x in ["HEAVY", "JUMBO", "BIG"]):  return "23"
-    if "EMPTY" in f:                                      return "00"
+    if any(x in f for x in ["HEAVY", "JUMBO", "BIG"]): return "23"
+    if "EMPTY" in f:                                     return "00"
     if "DOUBLE Y DOUBLE WING" in f:                      return "13"
-    if "TREY" in f:                                       return "12"
+    if "TREY" in f:                                      return "12"
     if "DUBS" in f or "TRIPS" in f:                      return "10"
     if "SPREAD" in f or "WING" in f:                     return "11"
     return "11"
@@ -49,6 +98,54 @@ def get_stars(pct):
     if pct >= 50: return "⭐⭐"
     return "⭐"
 
+
+def dls_grade(x):
+    if x >= 1.5:   return "A"
+    if x >= 0.8:   return "B"
+    if x >= 0.2:   return "C"
+    if x >= -0.5:  return "D"
+    return "F"
+
+
+# ============================================================
+# METRIC DEFINITIONS
+# ============================================================
+
+DEF_FD_RATE = """
+**📌 First Down Rate (FD Rate)**
+How often this personnel group or formation picks up the first down marker.
+A play counts if the gain meets or exceeds the distance needed.
+> *Higher = more consistent chain-moving.*
+"""
+
+DEF_SUCCESS_RATE = """
+**📌 Success Rate**
+Measures whether a play gained enough yardage relative to the situation:
+- **1st down:** gain ≥ 45% of distance (e.g., 4+ yds on 1st & 10)
+- **2nd down:** gain ≥ 65% of distance (e.g., 5+ yds on 2nd & 8)
+- **3rd/4th down:** full conversion required
+
+> *A team can have a high FD Rate but low Success Rate if they constantly face
+3rd & long — Success Rate exposes that pattern.*
+"""
+
+DEF_DLS = """
+**📐 Drive Leverage Score (DLS)**
+A single number that tells you how much control your offense had at every snap —
+whether you were ahead of the chains or constantly playing from behind.
+
+**How to read this table:**
+- **DLS above 1.0** = consistently favorable situations (short yardage, manageable downs)
+- **DLS near 0** = neutral — neither dominating nor struggling
+- **DLS below 0** = stress mode — too many 3rd-and-long situations
+
+**Field position modifier:** Red zone snaps (+0.5), backed up own 30 or deeper (-0.5).
+
+**DLS Grade:** A = dominant | B = solid | C = average | D = struggling | F = breakdown
+
+**Self-scout insight:** Low DLS + high explosive rate = surviving on big plays, not
+consistent chain-moving. That's a fragile identity defenses can game-plan against.
+"""
 
 # ============================================================
 # PAGE CONFIG
@@ -67,12 +164,11 @@ with st.sidebar:
     if not found_logo:
         st.subheader("🏈 CARLSBAD FOOTBALL")
     st.write("---")
-    st.caption("FormationIQ v3.0 — Drive Leverage Edition")
+    st.caption("FormationIQ v4.0 — Sheets Export Build")
 
 st.title("🏈 FormationIQ — Offensive Analytics")
 uploaded_file = st.file_uploader("Upload Hudl CSV", type="csv")
 
-# Sample data download for demos
 with st.expander("📂 No file? Download sample data"):
     sample_csv = """PLAY #,ODK,DN,DIST,YARD LN,HASH,OFF FORM,OFF STR,OFF PLAY,PLAY TYPE,GN/LS,RESULT,BACKFIELD,EFF,TARGET,MOTION DIR,PLAY DIR
 1,O,1,10,35,M,20 Wing,R,QUICK PASS,PASS,7,Complete,,Y,,,R
@@ -95,7 +191,7 @@ with st.expander("📂 No file? Download sample data"):
     )
 
 # ============================================================
-# MAIN APP — runs only when file is uploaded
+# MAIN APP
 # ============================================================
 
 if uploaded_file:
@@ -140,79 +236,134 @@ if uploaded_file:
             if d == 2: return g >= (dist * 0.65)
             return g >= dist
 
-        p_data['Is_Succ']     = p_data.apply(calc_succ, axis=1).astype(int)
+        p_data['Is_Succ']      = p_data.apply(calc_succ, axis=1).astype(int)
         p_data['Is_Explosive'] = (p_data[cols['gain']] >= 15).astype(int)
 
         # ── DLA FIELDS ──────────────────────────────────────
         leva = p_data.apply(
-            lambda r: classify_leverage(r[cols['dn']], r[cols['dist']]), axis=1
+            lambda r: classify_leverage(r[cols['dn']], r[cols['dist']], r[cols['field']]),
+            axis=1
         )
         p_data['Leverage_Band']  = leva.apply(lambda x: x[0])
         p_data['Leverage_Score'] = leva.apply(lambda x: x[1])
 
-        # Merge Drive_ID into p_data
         if 'Drive_ID' in df.columns and 'Drive_ID' not in p_data.columns:
             p_data = p_data.merge(df[['PLAY #', 'Drive_ID']], on='PLAY #', how='left')
 
         # ── DLA AGGREGATIONS ────────────────────────────────
 
-        # Per-drive
         drive_view = p_data.dropna(subset=['Drive_ID']).copy()
-        drive_dla = (
-            drive_view.groupby('Drive_ID')
-            .agg(
-                Plays        = ('Leverage_Score', 'count'),
-                Avg_Leverage = ('Leverage_Score', 'mean'),
-                High_Lev_Pct = ('Leverage_Score', lambda x: round((x >= 2).mean() * 100)),
-                Low_Lev_Pct  = ('Leverage_Score', lambda x: round((x <= -1).mean() * 100)),
-                FD_Rate      = ('Is_FD',          lambda x: round(x.mean() * 100)),
-                Success_Rate = ('Is_Succ',        lambda x: round(x.mean() * 100)),
-                Explosive_Rt = ('Is_Explosive',   lambda x: round(x.mean() * 100)),
-            )
-        )
-        drive_dla['Avg_Leverage'] = drive_dla['Avg_Leverage'].round(2)
 
-        # Per-personnel
-        pers_dla = (
-            p_data.groupby('PERSONNEL')
-            .agg(
-                Plays        = ('Leverage_Score', 'count'),
-                Avg_Leverage = ('Leverage_Score', 'mean'),
-                High_Lev_Pct = ('Leverage_Score', lambda x: round((x >= 2).mean() * 100)),
-                Low_Lev_Pct  = ('Leverage_Score', lambda x: round((x <= -1).mean() * 100)),
-                FD_Rate      = ('Is_FD',          lambda x: round(x.mean() * 100)),
-                Success_Rate = ('Is_Succ',        lambda x: round(x.mean() * 100)),
-                Explosive_Rt = ('Is_Explosive',   lambda x: round(x.mean() * 100)),
-                Run_Pct      = (cols['type'],     lambda x: round((x == 'RUN').mean() * 100)),
-                Pass_Pct     = (cols['type'],     lambda x: round((x == 'PASS').mean() * 100)),
-            )
-        )
-        pers_dla['Avg_Leverage'] = pers_dla['Avg_Leverage'].round(2)
+        drive_dla = drive_view.groupby('Drive_ID').agg(
+            Plays        = ('Leverage_Score', 'count'),
+            DLS          = ('Leverage_Score', 'mean'),
+            FD_Rate      = ('Is_FD',          'mean'),
+            Success_Rate = ('Is_Succ',        'mean'),
+            Explosive_Rt = ('Is_Explosive',   'mean'),
+        ).round(2)
+        drive_dla['High_Lev%'] = drive_view.groupby('Drive_ID')['Leverage_Score'].apply(lambda x: round((x >= 1.5).mean() * 100))
+        drive_dla['Low_Lev%']  = drive_view.groupby('Drive_ID')['Leverage_Score'].apply(lambda x: round((x <= -1).mean() * 100))
+        drive_dla['FD_Rate']      = (drive_dla['FD_Rate'] * 100).round(0).astype(int)
+        drive_dla['Success_Rate'] = (drive_dla['Success_Rate'] * 100).round(0).astype(int)
+        drive_dla['Explosive_Rt'] = (drive_dla['Explosive_Rt'] * 100).round(0).astype(int)
+        drive_dla['DLS_Grade']    = drive_dla['DLS'].apply(dls_grade)
 
-        # Per-personnel + formation
-        pf_dla = (
-            p_data.groupby(['PERSONNEL', cols['form']])
-            .agg(
-                Plays        = ('Leverage_Score', 'count'),
-                Avg_Leverage = ('Leverage_Score', 'mean'),
-                High_Lev_Pct = ('Leverage_Score', lambda x: round((x >= 2).mean() * 100)),
-                Low_Lev_Pct  = ('Leverage_Score', lambda x: round((x <= -1).mean() * 100)),
-                FD_Rate      = ('Is_FD',          lambda x: round(x.mean() * 100)),
-                Success_Rate = ('Is_Succ',        lambda x: round(x.mean() * 100)),
-                Explosive_Rt = ('Is_Explosive',   lambda x: round(x.mean() * 100)),
-            )
-            .query('Plays >= 5')
-        )
-        pf_dla['Avg_Leverage'] = pf_dla['Avg_Leverage'].round(2)
+        pers_dla = p_data.groupby('PERSONNEL').agg(
+            Plays        = ('Leverage_Score', 'count'),
+            DLS          = ('Leverage_Score', 'mean'),
+            Avg_Gain     = (cols['gain'],     'mean'),
+            FD_Rate      = ('Is_FD',          'mean'),
+            Success_Rate = ('Is_Succ',        'mean'),
+            Explosive_Rt = ('Is_Explosive',   'mean'),
+        ).round(2)
+        pers_dla['High_Lev%'] = p_data.groupby('PERSONNEL')['Leverage_Score'].apply(lambda x: round((x >= 1.5).mean() * 100))
+        pers_dla['Low_Lev%']  = p_data.groupby('PERSONNEL')['Leverage_Score'].apply(lambda x: round((x <= -1).mean() * 100))
+        pers_dla['Run%']      = p_data.groupby('PERSONNEL')[cols['type']].apply(lambda x: round((x == 'RUN').mean() * 100))
+        pers_dla['Pass%']     = p_data.groupby('PERSONNEL')[cols['type']].apply(lambda x: round((x == 'PASS').mean() * 100))
+        pers_dla['FD_Rate']      = (pers_dla['FD_Rate'] * 100).round(0).astype(int)
+        pers_dla['Success_Rate'] = (pers_dla['Success_Rate'] * 100).round(0).astype(int)
+        pers_dla['Explosive_Rt'] = (pers_dla['Explosive_Rt'] * 100).round(0).astype(int)
+        pers_dla['Avg_Gain']     = pers_dla['Avg_Gain'].round(1)
+        pers_dla['DLS_Grade']    = pers_dla['DLS'].apply(dls_grade)
 
-        # ── SIDEBAR STATS ───────────────────────────────────
+        pf_dla = p_data.groupby(['PERSONNEL', cols['form']]).agg(
+            Plays        = ('Leverage_Score', 'count'),
+            DLS          = ('Leverage_Score', 'mean'),
+            Avg_Gain     = (cols['gain'],     'mean'),
+            FD_Rate      = ('Is_FD',          'mean'),
+            Success_Rate = ('Is_Succ',        'mean'),
+            Explosive_Rt = ('Is_Explosive',   'mean'),
+        ).round(2)
+        pf_dla['High_Lev%'] = p_data.groupby(['PERSONNEL', cols['form']])['Leverage_Score'].apply(lambda x: round((x >= 1.5).mean() * 100))
+        pf_dla['Low_Lev%']  = p_data.groupby(['PERSONNEL', cols['form']])['Leverage_Score'].apply(lambda x: round((x <= -1).mean() * 100))
+        pf_dla['FD_Rate']      = (pf_dla['FD_Rate'] * 100).round(0).astype(int)
+        pf_dla['Success_Rate'] = (pf_dla['Success_Rate'] * 100).round(0).astype(int)
+        pf_dla['Explosive_Rt'] = (pf_dla['Explosive_Rt'] * 100).round(0).astype(int)
+        pf_dla['Avg_Gain']     = pf_dla['Avg_Gain'].round(1)
+        pf_dla['DLS_Grade']    = pf_dla['DLS'].apply(dls_grade)
+        pf_dla = pf_dla[pf_dla['Plays'] >= 5]
+
+        # ── CHAIN MOVING (needed for export map) ────────────
+        chain = p_data.groupby(cols['play'])['Is_FD'].agg(['sum', 'count'])
+        chain.columns = ['First Downs', 'Plays']
+        chain['FD Rate %'] = (chain['First Downs'] / chain['Plays'] * 100).round(0).astype(int)
+        chain = chain[chain['Plays'] >= 3].sort_values('FD Rate %', ascending=False).head(15)
+
+        # ── PERSONNEL COUNTS (needed for export map) ────────
+        pers_counts = p_data['PERSONNEL'].value_counts().to_frame("Plays")
+        pers_counts['%'] = (pers_counts['Plays'] / pers_counts['Plays'].sum() * 100).round(0).astype(int)
+
+        # 3rd down summary (needed for export map)
+        t3 = p_data[p_data[cols['dn']] == 3].copy()
+        if not t3.empty:
+            t3['Sit'] = t3[cols['dist']].apply(
+                lambda x: "3rd & Short (1-3)" if x <= 3 else ("3rd & Mid (4-7)" if x <= 7 else "3rd & Long (7+)")
+            )
+            t3_summary = t3.groupby('Sit')['Is_FD'].mean().mul(100).round(0).astype(int).to_frame("FD Rate %")
+        else:
+            t3_summary = pd.DataFrame()
+
+        # ── EXPORT OPTIONS MAP ───────────────────────────────
+        export_options = {
+            "Personnel Identity":           pers_counts,
+            "3rd Down Summary":             t3_summary,
+            "Chain Moving":                 chain,
+            "Drive Leverage (per drive)":   drive_dla,
+            "Drive Leverage (personnel)":   pers_dla,
+            "Drive Leverage (pers+form)":   pf_dla,
+        }
+
+        # ── SIDEBAR ─────────────────────────────────────────
         with st.sidebar:
             st.markdown("### 📊 Game Summary")
-            st.metric("Total Plays", len(p_data))
-            st.metric("Run Plays",  len(p_data[p_data[cols['type']] == 'RUN']))
-            st.metric("Pass Plays", len(p_data[p_data[cols['type']] == 'PASS']))
-            st.metric("Avg Gain",   f"{p_data[cols['gain']].mean():.1f} yds")
-            st.metric("FD Rate",    f"{round(p_data['Is_FD'].mean()*100)}%")
+            st.metric("Total Plays",   len(p_data))
+            st.metric("Run Plays",     len(p_data[p_data[cols['type']] == 'RUN']))
+            st.metric("Pass Plays",    len(p_data[p_data[cols['type']] == 'PASS']))
+            st.metric("Avg Gain",      f"{p_data[cols['gain']].mean():.1f} yds")
+            st.metric("FD Rate",       f"{round(p_data['Is_FD'].mean()*100)}%")
+            st.metric("Success Rate",  f"{round(p_data['Is_Succ'].mean()*100)}%")
+
+            if SHEETS_ENABLED and "google_service" in st.secrets:
+                st.write("---")
+                st.subheader("⬆️ Export to Google Sheets")
+                export_choice = st.selectbox(
+                    "Select report:",
+                    options=list(export_options.keys())
+                )
+                sheet_tab_name = st.text_input(
+                    "Worksheet name:",
+                    value=export_choice.replace(" ", "_")[:30]
+                )
+                if st.button("Export to Sheets"):
+                    df_to_export = export_options.get(export_choice)
+                    if df_to_export is not None and not df_to_export.empty:
+                        try:
+                            push_df_to_sheet(df_to_export, worksheet_name=sheet_tab_name)
+                            st.success(f"✅ '{export_choice}' exported to '{sheet_tab_name}'.")
+                        except Exception as e:
+                            st.error(f"Export failed: {e}")
+                    else:
+                        st.warning("No data available for that report.")
 
         # ── TABS ────────────────────────────────────────────
         tabs = st.tabs([
@@ -229,15 +380,15 @@ if uploaded_file:
         # ── TAB 0: PERSONNEL ────────────────────────────────
         with tabs[0]:
             st.header("📊 Personnel Identity")
+            with st.expander("📖 Metric Definitions"):
+                st.markdown(DEF_FD_RATE)
+                st.markdown(DEF_SUCCESS_RATE)
 
-            pers_counts = p_data['PERSONNEL'].value_counts().to_frame("Plays")
-            pers_counts['%'] = (pers_counts['Plays'] / pers_counts['Plays'].sum() * 100).round(0).astype(int)
             st.subheader("Overall Usage")
             st.dataframe(pers_counts, width="stretch")
 
             st.divider()
             c1, c2 = st.columns(2)
-
             with c1:
                 st.subheader("🏃 Top 5 Run Personnel")
                 run_pers = (
@@ -249,7 +400,6 @@ if uploaded_file:
                 run_pers['Avg_Gain'] = run_pers['Avg_Gain'].round(1)
                 run_pers['Run %'] = (run_pers['Plays'] / run_pers['Plays'].sum() * 100).round(0).astype(int)
                 st.dataframe(run_pers.style.background_gradient(cmap='RdYlGn', subset=['Avg_Gain']), width="stretch")
-
             with c2:
                 st.subheader("🎯 Top 5 Pass Personnel")
                 pass_pers = (
@@ -273,15 +423,14 @@ if uploaded_file:
         # ── TAB 1: 3RD DOWN ─────────────────────────────────
         with tabs[1]:
             st.header("🎯 3rd Down Efficiency")
-            t3 = p_data[p_data[cols['dn']] == 3].copy()
+            with st.expander("📖 Metric Definitions"):
+                st.markdown(DEF_FD_RATE)
+
             if not t3.empty:
                 st.metric("3rd Down Conversion Rate", f"{round(t3['Is_FD'].mean()*100)}%")
-                t3['Sit'] = t3[cols['dist']].apply(
-                    lambda x: "3rd & Short (1-3)" if x <= 3 else ("3rd & Mid (4-7)" if x <= 7 else "3rd & Long (7+)")
-                )
                 c1, c2 = st.columns(2)
                 with c1:
-                    st.table(t3.groupby('Sit')['Is_FD'].mean().mul(100).round(0).astype(int).to_frame("FD Rate %"))
+                    st.table(t3_summary)
                 with c2:
                     t3_tend = t3.groupby('Sit')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100).round(0).astype(int)
                     st.dataframe(t3_tend.style.background_gradient(cmap='RdYlGn_r').format("{:d}%"), width="stretch")
@@ -294,15 +443,18 @@ if uploaded_file:
         # ── TAB 2: CHAIN MOVING ──────────────────────────────
         with tabs[2]:
             st.header("📈 Chain Moving (Frequency)")
-            chain = p_data.groupby(cols['play'])['Is_FD'].agg(['sum', 'count'])
-            chain.columns = ['First Downs', 'Plays']
-            chain['FD Rate %'] = (chain['First Downs'] / chain['Plays'] * 100).round(0).astype(int)
-            chain = chain[chain['Plays'] >= 3].sort_values('FD Rate %', ascending=False).head(15)
+            with st.expander("📖 Metric Definitions"):
+                st.markdown(DEF_FD_RATE)
+                st.markdown(DEF_SUCCESS_RATE)
             st.dataframe(chain.style.background_gradient(cmap='RdYlGn', subset=['FD Rate %']), width="stretch")
 
         # ── TAB 3: RED/GREEN ZONE ────────────────────────────
         with tabs[3]:
             st.header("🟢 Red/Green Zone")
+            with st.expander("📖 Metric Definitions"):
+                st.markdown(DEF_FD_RATE)
+                st.markdown(DEF_SUCCESS_RATE)
+
             rz = p_data[p_data[cols['field']].between(1, 10)].copy()
             gz = p_data[p_data[cols['field']].between(11, 20)].copy()
             c1, c2 = st.columns(2)
@@ -324,6 +476,10 @@ if uploaded_file:
         # ── TAB 4: WINNING PROBABILITY ───────────────────────
         with tabs[4]:
             st.header("🔮 Winning Probability (AI)")
+            with st.expander("📖 Metric Definitions"):
+                st.markdown(DEF_FD_RATE)
+                st.markdown(DEF_SUCCESS_RATE)
+
             m1, m2, m3 = st.columns(3)
             m1.metric("Overall FD Rate",      f"{round(p_data['Is_FD'].mean()*100)}%")
             m2.metric("Overall Success Rate", f"{round(p_data['Is_Succ'].mean()*100)}%")
@@ -382,31 +538,30 @@ if uploaded_file:
         # ── TAB 7: DRIVE LEVERAGE (DLA) ──────────────────────
         with tabs[7]:
             st.header("📐 Drive Leverage Score (DLS)")
-            st.caption(
-                "DLS measures how often your offense stays in favorable down-and-distance situations. "
-                "High = staying ahead of chains. Low = digging out of stress situations. "
-                "Use this to identify which personnel and formations keep drives alive."
-            )
+            with st.expander("📖 Metric Definitions"):
+                st.markdown(DEF_DLS)
+                st.markdown(DEF_FD_RATE)
+                st.markdown(DEF_SUCCESS_RATE)
 
             st.subheader("Per-Drive Summary")
             st.dataframe(
-                drive_dla.style.background_gradient(cmap='RdYlGn', subset=['Avg_Leverage']),
+                drive_dla.style.background_gradient(cmap='RdYlGn', subset=['DLS']),
                 width="stretch"
             )
 
             st.divider()
             st.subheader("Personnel Leverage Profile")
             st.dataframe(
-                pers_dla.sort_values('Avg_Leverage', ascending=False)
-                .style.background_gradient(cmap='RdYlGn', subset=['Avg_Leverage']),
+                pers_dla.sort_values('DLS', ascending=False)
+                .style.background_gradient(cmap='RdYlGn', subset=['DLS']),
                 width="stretch"
             )
 
             st.divider()
             with st.expander("📋 Personnel + Formation Leverage (min 5 plays)"):
                 st.dataframe(
-                    pf_dla.sort_values('Avg_Leverage', ascending=False)
-                    .style.background_gradient(cmap='RdYlGn', subset=['Avg_Leverage']),
+                    pf_dla.sort_values('DLS', ascending=False)
+                    .style.background_gradient(cmap='RdYlGn', subset=['DLS']),
                     width="stretch"
                 )
 
