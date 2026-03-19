@@ -155,7 +155,6 @@ def build_sss(p_data, cols):
 
 
 def build_fei(p_data, cols):
-    def build_fei(p_data, cols):
     df_f = p_data.copy()
     df_f['Dist_Bucket']   = df_f.apply(lambda r: dist_bucket(r[cols['dn']], r[cols['dist']]), axis=1)
     df_f['Expected_Gain'] = df_f['Dist_Bucket'].map(EXPECTED_GAIN).fillna(4.0)
