@@ -1537,7 +1537,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                     st.write("**🧭 FEI by Play Direction**")
                     st.caption("Which direction are they attacking and is it actually working?")
                     c1, c2 = st.columns(2)
-                                        with c1:
+                    with c1:
                         st.write("**🏃 Run Direction**")
                         run_dir = dir_fei.xs('RUN', level=1) if 'RUN' in dir_fei.index.get_level_values(1) else pd.DataFrame()
                         if not run_dir.empty:
