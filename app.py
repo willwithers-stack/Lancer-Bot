@@ -687,8 +687,9 @@ def build_fei(p_data, cols):
 
     fei_df = fei_df.join(std[['Std_FEI', 'Std_Plays']], how='left')
     fei_df = fei_df.join(pas[['PD_FEI', 'PD_Plays']], how='left')
-    fei_df['Std_FEI'] = fei_df['Std_FEI'].fillna('-')
-    fei_df['PD_FEI']  = fei_df['PD_FEI'].fillna('-')
+    fei_df['Std_FEI'] = fei_df['Std_FEI'].fillna(0.0).astype(float)
+    fei_df['PD_FEI']  = fei_df['PD_FEI'].fillna(0.0).astype(float)
+
 
     # Play Direction FEI
     if cols['p_dir'] in df_f.columns:
