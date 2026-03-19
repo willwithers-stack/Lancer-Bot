@@ -445,15 +445,28 @@ averaging only **{cause_gain} yards** on the prior snap.
 ⚠️ **Exploit:** When you take away their top chain-movers they fall back on low-conversion habits. Take away the top plays, invite the bad ones, capitalize on the punt.
 """))
 
-    verdict_score = sum([succ_rt >= 55, exp_rt >= 15, avg_dls >= 1.0, fd_rate >= 45])
-    if verdict_score >= 3:
-        verdict = "🔴 **High-Threat Offense.** Executing well across multiple dimensions. No single silver bullet — stop them consistently on every snap."
-    elif verdict_score == 2:
-        verdict = "🟡 **Moderate-Threat Offense.** Real weapons but clear weaknesses. Exploit stress patterns and low-FEI formations early to get them off schedule."
-    else:
-        verdict = "🟢 **Manageable Offense.** Struggles to stay on schedule. Force early-down stops, play assignment football, and let their own tendencies beat them."
+verdict_score = 0
 
-    lines.append(("🎯 Overall Scouting Verdict", verdict))
+if fd_rate >= 43:   verdict_score += 1
+if fd_rate >= 50:   verdict_score += 1
+if succ_rt >= 45:   verdict_score += 1
+if succ_rt >= 52:   verdict_score += 1
+if exp_rt >= 10:    verdict_score += 1
+if exp_rt >= 18:    verdict_score += 1
+if avg_dls >= 0.6:  verdict_score += 1
+if avg_dls >= 1.0:  verdict_score += 1
+if avg_gain >= 5.0: verdict_score += 1
+if avg_gain >= 6.5: verdict_score += 1
+
+if verdict_score >= 7:
+    verdict = "🔴 **High-Threat Offense.** This team is executing well across multiple dimensions. No single silver bullet — must stop them consistently on every snap."
+elif verdict_score >= 4:
+    verdict = "🟡 **Moderate-Threat Offense.** Real weapons but exploitable weaknesses. Attack their stress patterns and low-FEI formations early."
+else:
+    verdict = "🟢 **Manageable Offense.** Struggles to stay on schedule. Force early-down stops, play assignment football, and let their tendencies beat them."
+
+lines.append(("🎯 Overall Scouting Verdict", verdict))
+return lines
     return lines
 
 
