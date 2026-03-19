@@ -238,7 +238,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     ws2 = wb.create_sheet("2 - Formation FEI")
     ws2.sheet_view.showGridLines = False
 
-    ws2.merge_cells("A1:8")
+    ws2.merge_cells("A1:H1")
     c = ws2["A1"]
     c.value     = "Formation Efficiency Index (FEI) — Actual Gain vs Expected Gain by Situation"
     c.fill      = make_fill(DARK)
