@@ -432,7 +432,7 @@ averaging only **{cause_gain} yards** on the prior snap.
 ⚠️ **Exploit:** Zone-by-zone tendencies let you call the right front BEFORE the snap.
 """))
 
-       if not chain.empty:
+    if not chain.empty:
         top_plays_text = "\n".join([f"- **{play}** — {row['Plays']} plays, {row['FD Rate %']}% FD, {row['Success Rate %']}% success" for play, row in chain.head(5).iterrows()])
         bot_plays_text = "\n".join([f"- **{play}** — {row['Plays']} plays, {row['FD Rate %']}% FD" for play, row in chain.sort_values('FD Rate %').head(3).iterrows()])
         lines.append(("📈 Chain-Moving Plays to Stop", f"""
