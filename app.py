@@ -9,7 +9,7 @@ from io import BytesIO
 # EXCEL EXPORT
 # ============================================================
 
-   def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
+def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
                        fei_df, dir_fei, fpar_df, sss_summary,
                        sss_by_form, chain, intel_df, scout_sections,
                        cols, verdict_score):
