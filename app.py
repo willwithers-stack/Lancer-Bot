@@ -955,7 +955,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             else:
                 st.info("No 3rd & long stress situations found.")
 
-                        st.divider()
+            st.divider()
             st.subheader("📐 Formation Efficiency Index (FEI)")
             st.caption("FEI > 1.0 = outperforming situation. FEI < 1.0 = underperforming.")
             if not fei_df.empty:
