@@ -1182,7 +1182,7 @@ if uploaded_file:
             p_data, drive_dla, pers_dla, fei_df,
             fpar_df, sss_summary, sss_by_form, chain, cols
         )
-verdict_score = 0
+        verdict_score = 0
         if round(p_data['Is_FD'].mean()*100) >= 30:        verdict_score += 1
         if round(p_data['Is_FD'].mean()*100) >= 38:        verdict_score += 1
         if round(p_data['Is_Succ'].mean()*100) >= 45:      verdict_score += 1
