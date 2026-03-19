@@ -447,14 +447,14 @@ averaging only **{cause_gain} yards** on the prior snap.
 
     verdict_score = 0
 
-    if fd_rate >= 43:   verdict_score += 1
-    if fd_rate >= 50:   verdict_score += 1
+    if fd_rate >= 30:   verdict_score += 1
+    if fd_rate >= 38:   verdict_score += 1
     if succ_rt >= 45:   verdict_score += 1
     if succ_rt >= 52:   verdict_score += 1
     if exp_rt >= 10:    verdict_score += 1
-    if exp_rt >= 18:    verdict_score += 1
-    if avg_dls >= 0.6:  verdict_score += 1
-    if avg_dls >= 1.0:  verdict_score += 1
+    if exp_rt >= 15:    verdict_score += 1
+    if avg_dls >= 0.3:  verdict_score += 1
+    if avg_dls >= 0.7:  verdict_score += 1
     if avg_gain >= 5.0: verdict_score += 1
     if avg_gain >= 6.5: verdict_score += 1
 
@@ -1013,17 +1013,6 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
         # ── TAB 8: SCOUT REPORT ──────────────────────────────
         with tabs[8]:
             st.header("🕵️ Opponent Scout Report")
-
-            # TEMP DEBUG — remove after fixing
-            st.write({
-                "fd_rate":  round(p_data['Is_FD'].mean()*100),
-                "succ_rt":  round(p_data['Is_Succ'].mean()*100),
-                "exp_rt":   round(p_data['Is_Explosive'].mean()*100),
-                "avg_dls":  round(drive_dla['DLS'].mean(), 2) if not drive_dla.empty else 0,
-                "avg_gain": round(p_data[cols['gain']].mean(), 1),
-            })
-            # END TEMP DEBUG
-
             st.caption("Auto-generated executive overview based on FormationIQ analysis. Use this as your coaching staff briefing.")
             st.divider()
             for section_title, section_body in scout_sections:
