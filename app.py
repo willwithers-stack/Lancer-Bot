@@ -1208,7 +1208,12 @@ if uploaded_file:
             st.metric("Success Rate", f"{round(p_data['Is_Succ'].mean()*100)}%")
             st.write("---")
             st.subheader("⬇️ Download Full Report")
-            excel_data = build_excel_export(export_options)
+           excel_data = build_excel_export(
+              export_options, p_data, drive_dla, pers_dla,
+              fei_df, dir_fei, fpar_df, sss_summary,
+              sss_by_form, chain, intel_df, scout_sections,
+              cols, verdict_score
+          )
             st.download_button(
                 label="📥 Download FormationIQ Report",
                 data=excel_data,
