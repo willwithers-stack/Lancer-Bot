@@ -155,9 +155,22 @@ def build_sss(p_data, cols):
 
 
 def build_fei(p_data, cols):
+    def build_fei(p_data, cols):
     df_f = p_data.copy()
     df_f['Dist_Bucket']   = df_f.apply(lambda r: dist_bucket(r[cols['dn']], r[cols['dist']]), axis=1)
     df_f['Expected_Gain'] = df_f['Dist_Bucket'].map(EXPECTED_GAIN).fillna(4.0)
+
+    # Standard vs Passing down flag
+    def is_pass_down(row):
+        d, dist = row[cols['dn']], row[cols['dist']]
+        if d == 1: return False
+        if d == 2: return dist >= 8
+        if d in (3, 4): return dist >= 5
+        return False
+
+    df_f['Is_Pass_Down'] = df_f.apply(is_pass_down, axis=1)
+
+    # Base FEI
     fei_df = (
         df_f.groupby([cols['form'], cols['type']])
         .agg(Plays=(cols['gain'],'count'), Avg_Gain=(cols['gain'],'mean'), Avg_Expected=('Expected_Gain','mean'))
@@ -168,7 +181,46 @@ def build_fei(p_data, cols):
     fei_df['FEI_Grade'] = fei_df['FEI'].apply(
         lambda x: 'A' if x >= 1.4 else ('B' if x >= 1.1 else ('C' if x >= 0.9 else ('D' if x >= 0.7 else 'F')))
     )
-    return fei_df.sort_values('FEI', ascending=False)
+
+    # Std Down FEI
+    std = df_f[df_f['Is_Pass_Down'] == False].groupby([cols['form'], cols['type']]).agg(
+        Std_Gain=(cols['gain'],'mean'), Std_Exp=('Expected_Gain','mean'), Std_Plays=(cols['gain'],'count')
+    ).round(2)
+    std['Std_FEI'] = (std['Std_Gain'] / std['Std_Exp']).round(2)
+
+    # Pass Down FEI
+    pas = df_f[df_f['Is_Pass_Down'] == True].groupby([cols['form'], cols['type']]).agg(
+        PD_Gain=(cols['gain'],'mean'), PD_Exp=('Expected_Gain','mean'), PD_Plays=(cols['gain'],'count')
+    ).round(2)
+    pas['PD_FEI'] = (pas['PD_Gain'] / pas['PD_Exp']).round(2)
+
+    fei_df = fei_df.join(std[['Std_FEI', 'Std_Plays']], how='left')
+    fei_df = fei_df.join(pas[['PD_FEI', 'PD_Plays']], how='left')
+    fei_df['Std_FEI'] = fei_df['Std_FEI'].fillna('-')
+    fei_df['PD_FEI']  = fei_df['PD_FEI'].fillna('-')
+
+    # Play Direction FEI
+    if cols['p_dir'] in df_f.columns:
+        df_f['Dir'] = df_f[cols['p_dir']].astype(str).str.upper().str.strip()
+        df_f['Dir'] = df_f['Dir'].apply(
+            lambda x: 'LEFT' if 'L' in x else ('RIGHT' if 'R' in x else ('MIDDLE' if 'M' in x else 'UNKNOWN'))
+        )
+        dir_fei = (
+            df_f[df_f['Dir'] != 'UNKNOWN']
+            .groupby([cols['form'], cols['type'], 'Dir'])
+            .agg(Plays=(cols['gain'],'count'), Avg_Gain=(cols['gain'],'mean'), Avg_Expected=('Expected_Gain','mean'))
+            .round(2)
+        )
+        dir_fei = dir_fei[dir_fei['Plays'] >= 3]
+        dir_fei['FEI'] = (dir_fei['Avg_Gain'] / dir_fei['Avg_Expected']).round(2)
+        dir_fei['Grade'] = dir_fei['FEI'].apply(
+            lambda x: 'A' if x >= 1.4 else ('B' if x >= 1.1 else ('C' if x >= 0.9 else ('D' if x >= 0.7 else 'F')))
+        )
+    else:
+        dir_fei = pd.DataFrame()
+
+    return fei_df.sort_values('FEI', ascending=False), dir_fei
+
 
 
 def build_fpar(p_data, cols):
@@ -613,7 +665,7 @@ if uploaded_file:
         pf_dla = pf_dla[pf_dla['Plays'] >= 5]
 
         sss_df, sss_summary, sss_by_form = build_sss(p_data, cols)
-        fei_df  = build_fei(p_data, cols)
+        fei_df, dir_fei  = build_fei(p_data, cols)
         fpar_df = build_fpar(p_data, cols)
         intel_df = build_intel(p_data, df, cols)
 
