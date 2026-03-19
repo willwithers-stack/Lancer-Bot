@@ -1182,7 +1182,17 @@ if uploaded_file:
             p_data, drive_dla, pers_dla, fei_df,
             fpar_df, sss_summary, sss_by_form, chain, cols
         )
-
+verdict_score = 0
+        if round(p_data['Is_FD'].mean()*100) >= 30:        verdict_score += 1
+        if round(p_data['Is_FD'].mean()*100) >= 38:        verdict_score += 1
+        if round(p_data['Is_Succ'].mean()*100) >= 45:      verdict_score += 1
+        if round(p_data['Is_Succ'].mean()*100) >= 52:      verdict_score += 1
+        if round(p_data['Is_Explosive'].mean()*100) >= 10: verdict_score += 1
+        if round(p_data['Is_Explosive'].mean()*100) >= 15: verdict_score += 1
+        if (not drive_dla.empty) and drive_dla['DLS'].mean() >= 0.3: verdict_score += 1
+        if (not drive_dla.empty) and drive_dla['DLS'].mean() >= 0.7: verdict_score += 1
+        if round(p_data[cols['gain']].mean(), 1) >= 5.0:   verdict_score += 1
+        if round(p_data[cols['gain']].mean(), 1) >= 6.5:   verdict_score += 1
         export_options = {
             "Personnel Identity":         pers_counts,
             "3rd Down Summary":           t3_summary,
