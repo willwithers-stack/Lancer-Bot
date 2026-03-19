@@ -1199,7 +1199,7 @@ if uploaded_file:
 
         # ── SIDEBAR ─────────────────────────────────────────
         with st.sidebar:
-            st.markdown("### 📊 Game Summary")
+           st.markdown("### 📊 Game Summary")
             st.metric("Total Plays",  len(p_data))
             st.metric("Run Plays",    len(p_data[p_data[cols['type']] == 'RUN']))
             st.metric("Pass Plays",   len(p_data[p_data[cols['type']] == 'PASS']))
@@ -1208,12 +1208,18 @@ if uploaded_file:
             st.metric("Success Rate", f"{round(p_data['Is_Succ'].mean()*100)}%")
             st.write("---")
             st.subheader("⬇️ Download Full Report")
-           excel_data = build_excel_export(
-              export_options, p_data, drive_dla, pers_dla,
-              fei_df, dir_fei, fpar_df, sss_summary,
-              sss_by_form, chain, intel_df, scout_sections,
-              cols, verdict_score
-          )
+            excel_data = build_excel_export(
+                export_options, p_data, drive_dla, pers_dla,
+                fei_df, dir_fei, fpar_df, sss_summary,
+                sss_by_form, chain, intel_df, scout_sections,
+                cols, verdict_score
+            )
+            st.download_button(
+                label="📥 Download FormationIQ Report",
+                data=excel_data,
+                file_name="FormationIQ_Report.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
             st.download_button(
                 label="📥 Download FormationIQ Report",
                 data=excel_data,
