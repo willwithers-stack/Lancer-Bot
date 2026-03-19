@@ -1011,7 +1011,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 st.dataframe(pf_dla.sort_values('DLS', ascending=False).style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
 
         # ── TAB 8: SCOUT REPORT ──────────────────────────────
-                with tabs[8]:
+        with tabs[8]:
             st.header("🕵️ Opponent Scout Report")
 
             # TEMP DEBUG — remove after fixing
