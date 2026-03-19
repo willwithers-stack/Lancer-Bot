@@ -1511,7 +1511,8 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                     st.write("**Top Formations Creating Stress**")
                     st.dataframe(sss_by_form.style.background_gradient(cmap='RdYlGn_r', subset=['Stress_Count']), use_container_width=False)
                 with st.expander("📋 Full Stress Play Log"):
-                    st.dataframe(sss_df.reset_index(drop=True), use_container_width=False)
+                    sss_display = sss_df.reset_index(drop=True).astype(str)
+                    st.dataframe(sss_display, use_container_width=False)
             else:
                 st.info("No 3rd & long stress situations found.")
 
@@ -1537,22 +1538,24 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                     st.caption("Which direction are they attacking and is it actually working?")
                     c1, c2 = st.columns(2)
                     with c1:
-                        st.write("**🏃 Run Direction**")
+                      st.write("**🏃 Run Direction**")
                         run_dir = dir_fei.xs('RUN', level=1) if 'RUN' in dir_fei.index.get_level_values(1) else pd.DataFrame()
                         if not run_dir.empty:
-                            rd = run_dir[['Plays','Avg_Gain','FEI','Grade']].copy()
-                            rd['Plays']    = rd['Plays'].astype(int)
-                            rd['Avg_Gain'] = rd['Avg_Gain'].astype(float)
-                            rd['FEI']      = pd.to_numeric(rd['FEI'], errors='coerce')
+                            rd = run_dir[['Plays','Avg_Gain','FEI','Grade']].copy().reset_index()
+                            rd = rd.astype({c: str for c in rd.select_dtypes('object').columns})
+                            rd['Plays']    = pd.to_numeric(rd['Plays'],    errors='coerce')
+                            rd['Avg_Gain'] = pd.to_numeric(rd['Avg_Gain'], errors='coerce')
+                            rd['FEI']      = pd.to_numeric(rd['FEI'],      errors='coerce')
                             st.dataframe(rd.style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
                     with c2:
                         st.write("**🎯 Pass Direction**")
                         pass_dir = dir_fei.xs('PASS', level=1) if 'PASS' in dir_fei.index.get_level_values(1) else pd.DataFrame()
                         if not pass_dir.empty:
-                            pd2 = pass_dir[['Plays','Avg_Gain','FEI','Grade']].copy()
-                            pd2['Plays']    = pd2['Plays'].astype(int)
-                            pd2['Avg_Gain'] = pd2['Avg_Gain'].astype(float)
-                            pd2['FEI']      = pd.to_numeric(pd2['FEI'], errors='coerce')
+                            pd2 = pass_dir[['Plays','Avg_Gain','FEI','Grade']].copy().reset_index()
+                            pd2 = pd2.astype({c: str for c in pd2.select_dtypes('object').columns})
+                            pd2['Plays']    = pd.to_numeric(pd2['Plays'],    errors='coerce')
+                            pd2['Avg_Gain'] = pd.to_numeric(pd2['Avg_Gain'], errors='coerce')
+                            pd2['FEI']      = pd.to_numeric(pd2['FEI'],      errors='coerce')
                             st.dataframe(pd2.style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
             else:
                 st.info("Not enough play volume for FEI (min 4 plays per formation/type).")
