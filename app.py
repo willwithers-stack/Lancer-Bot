@@ -955,7 +955,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             else:
                 st.info("No 3rd & long stress situations found.")
 
-            st.divider()
+                        st.divider()
             st.subheader("📐 Formation Efficiency Index (FEI)")
             st.caption("FEI > 1.0 = outperforming situation. FEI < 1.0 = underperforming.")
             if not fei_df.empty:
@@ -964,12 +964,28 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                     st.write("**🏃 Run FEI**")
                     run_fei = fei_df.xs('RUN', level=1) if 'RUN' in fei_df.index.get_level_values(1) else pd.DataFrame()
                     if not run_fei.empty:
-                        st.dataframe(run_fei.head(8).style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
+                        st.dataframe(run_fei[['Plays','FEI','FEI_Grade','Std_FEI','PD_FEI']].style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
                 with c2:
                     st.write("**🎯 Pass FEI**")
                     pass_fei = fei_df.xs('PASS', level=1) if 'PASS' in fei_df.index.get_level_values(1) else pd.DataFrame()
                     if not pass_fei.empty:
-                        st.dataframe(pass_fei.head(8).style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
+                        st.dataframe(pass_fei[['Plays','FEI','FEI_Grade','Std_FEI','PD_FEI']].style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
+
+                if not dir_fei.empty:
+                    st.divider()
+                    st.write("**🧭 FEI by Play Direction**")
+                    st.caption("Which direction are they attacking and is it actually working?")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        st.write("**🏃 Run Direction**")
+                        run_dir = dir_fei.xs('RUN', level=1) if 'RUN' in dir_fei.index.get_level_values(1) else pd.DataFrame()
+                        if not run_dir.empty:
+                            st.dataframe(run_dir[['Plays','Avg_Gain','FEI','Grade']].style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
+                    with c2:
+                        st.write("**🎯 Pass Direction**")
+                        pass_dir = dir_fei.xs('PASS', level=1) if 'PASS' in dir_fei.index.get_level_values(1) else pd.DataFrame()
+                        if not pass_dir.empty:
+                            st.dataframe(pass_dir[['Plays','Avg_Gain','FEI','Grade']].style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
             else:
                 st.info("Not enough play volume for FEI (min 4 plays per formation/type).")
 
