@@ -1595,7 +1595,12 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             st.dataframe(pers_dla.sort_values('DLS', ascending=False).style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
             st.divider()
             with st.expander("📋 Personnel + Formation Leverage (min 5 plays)"):
-                st.dataframe(pf_dla.sort_values('DLS', ascending=False).style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
+                pf_display = pf_dla.sort_values('DLS', ascending=False).reset_index()
+                pf_display = pf_display.astype({c: str for c in pf_display.select_dtypes('object').columns})
+                for col in ['DLS','Avg_Gain','FD_Rate','Success_Rate','Explosive_Rt','High_Lev%','Low_Lev%']:
+                    if col in pf_display.columns:
+                        pf_display[col] = pd.to_numeric(pf_display[col], errors='coerce')
+                st.dataframe(pf_display.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
 
         # ── TAB 8: SCOUT REPORT ──────────────────────────────
         with tabs[8]:
