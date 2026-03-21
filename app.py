@@ -869,6 +869,39 @@ with st.sidebar:
     st.caption("FormationIQ v9.0 — Final Build")
 
 st.title("🏈 FormationIQ — Offensive Scouting Analytics")
+st.markdown("""
+> Upload a Hudl play-by-play export and instantly break down your opponent's offensive tendencies — by formation, personnel, down, distance, and more.
+""")
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("### 📤 Getting Started")
+    st.markdown("""
+- Export your opponent's playlist from **Hudl** as CSV or Excel
+- Upload the file using the uploader below
+- All tabs populate automatically — no setup needed
+""")
+
+with col2:
+    st.markdown("### 📊 What's Inside")
+    st.markdown("""
+- **Formation & Personnel** breakdowns
+- **Run/Pass tendencies** by down & distance
+- **Field zone** and hash analysis
+- **Play success** and explosive play rates
+- **Custom Pivot Lab** — build your own views
+""")
+
+with col3:
+    st.markdown("### 💡 Tips")
+    st.markdown("""
+- Use the **Play Type filter** to isolate run or pass
+- All charts and tables are **exportable to Excel**
+- Try the sample data below if you don't have a file yet
+""")
+
+st.divider()
 uploaded_file = st.file_uploader("Upload Hudl file (CSV or Excel)", type=["csv", "xlsx"])
 
 with st.expander("📂 No file? Download sample data"):
