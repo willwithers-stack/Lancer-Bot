@@ -822,13 +822,29 @@ averaging only **{cause_gain} yards** on the prior snap.
     if avg_gain >= 5.0: verdict_score += 1
     if avg_gain >= 6.5: verdict_score += 1
 
-    if verdict_score >= 7:
-        verdict = "🔴 **High-Threat Offense.** This team is executing well across multiple dimensions. No single silver bullet — must stop them consistently on every snap."
-    elif verdict_score >= 4:
-        verdict = "🟡 **Moderate-Threat Offense.** Real weapons but exploitable weaknesses. Attack their stress patterns and low-FEI formations early."
-    else:
-        verdict = "🟢 **Manageable Offense.** Struggles to stay on schedule. Force early-down stops, play assignment football, and let their tendencies beat them."
+    # Identify dominant signals
+    strengths = []
+    if avg_gain >= 6.5:   strengths.append(f"elite yards per play ({avg_gain})")
+    elif avg_gain >= 5.0: strengths.append(f"strong yards per play ({avg_gain})")
+    if exp_rt >= 15:      strengths.append(f"dangerous big-play rate ({exp_rt}%)")
+    elif exp_rt >= 10:    strengths.append(f"moderate explosive threat ({exp_rt}%)")
+    if succ_rt >= 52:     strengths.append(f"elite success rate ({succ_rt}%)")
+    elif succ_rt >= 45:   strengths.append(f"above-average success rate ({succ_rt}%)")
+    if fd_rate >= 50:     strengths.append(f"high first down rate ({fd_rate}%)")
+    elif fd_rate >= 38:   strengths.append(f"solid first down rate ({fd_rate}%)")
+    if not drive_dla.empty:
+        dls = round(drive_dla['DLS'].mean(), 2)
+        if dls >= 0.7:    strengths.append(f"controlled drive leverage (DLS: {dls})")
+        elif dls >= 0.3:  strengths.append(f"moderate drive control (DLS: {dls})")
 
+    strength_text = ", ".join(strengths[:3]) if strengths else "balanced production"
+
+    if verdict_score >= 7:
+        verdict = f"🔴 **High-Threat Offense.** Powered by {strength_text}. No single silver bullet — must stop them consistently on every snap."
+    elif verdict_score >= 4:
+        verdict = f"🟡 **Moderate-Threat Offense.** Key weapons: {strength_text}. Attack their stress patterns on early downs and force them behind the chains."
+    else:
+        verdict = f"🟢 **Manageable Offense.** Limited by {strength_text if strengths else 'inconsistent execution'}. Force early-down stops and let their tendencies beat them."
     lines.append(("🎯 Overall Scouting Verdict", verdict))
     return lines
 
