@@ -192,7 +192,6 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     r += 1
     header_row(ws1, r, ["Category","Finding","Action","Stat","Priority"], bg=MED)
     exploits = []
-            ])
     if not sss_summary.empty:
         top_sss = sss_summary.sort_values('Stress %', ascending=False).iloc[0]
         exploits.append([
