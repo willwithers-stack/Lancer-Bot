@@ -1262,14 +1262,14 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             gz = p_data[p_data[cols['field']].between(1, 10)].copy()
             c1, c2 = st.columns(2)
             with c1:
-                st.subheader("🔴 Red Zone (1-10)")
+                st.subheader("🔴 Red Zone (11-20)")
                 if not rz.empty:
                     st.metric("TD/FD Rate", f"{round(rz['Is_FD'].mean()*100)}%")
                     st.table(rz[cols['play']].value_counts().head(5).to_frame("Plays"))
                 else:
                     st.info("No red zone plays.")
             with c2:
-                st.subheader("🟢 Green Zone (11-20)")
+                st.subheader("🟢 Green Zone (1-10)")
                 if not gz.empty:
                     st.metric("Success Rate", f"{round(gz['Is_Succ'].mean()*100)}%")
                     st.table(gz[cols['play']].value_counts().head(5).to_frame("Plays"))
