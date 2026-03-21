@@ -1327,15 +1327,146 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
 
         # ── TAB 6: PIVOT LAB ─────────────────────────────────
         with tabs[6]:
-            st.header("🧪 Custom Pivot Lab")
-            pivot_cols = [c for c in [cols['dn'], cols['form'], cols['play'], cols['type'], 'PERSONNEL', cols['result']] if c in p_data.columns]
-            selected = st.multiselect("Select columns:", options=p_data.columns.tolist(), default=pivot_cols)
-            play_filter = st.selectbox("Filter by Play Type:", ["ALL", "RUN", "PASS"])
+                       st.header("🧪 Pivot Lab")
+            st.caption("Build your own custom views. Filter, group, and export any combination of data.")
+
+            # ── FILTERS ─────────────────────────────────
+            st.subheader("🔽 Filters")
+            fc1, fc2, fc3, fc4 = st.columns(4)
+            with fc1:
+                play_filter = st.radio("Play Type", ["ALL", "RUN", "PASS"], horizontal=True)
+            with fc2:
+                down_filter = st.multiselect("Down", [1, 2, 3, 4], default=[1, 2, 3, 4])
+            with fc3:
+                dist_filter = st.radio("Distance", ["ALL", "Short (1-3)", "Med (4-7)", "Long (8+)"], horizontal=False)
+            with fc4:
+                zone_filter = st.radio("Field Zone", ["ALL", "Own Territory", "Midfield", "Scoring Zone"], horizontal=False)
+
+            # ── APPLY FILTERS ────────────────────────────
             view = p_data.copy()
             if play_filter != "ALL":
                 view = view[view[cols['type']] == play_filter]
-            if selected:
-                st.dataframe(view[selected].reset_index(drop=True), use_container_width=True)
+            if down_filter:
+                view = view[view[cols['dn']].isin(down_filter)]
+            if dist_filter == "Short (1-3)":
+                view = view[view[cols['dist']] <= 3]
+            elif dist_filter == "Med (4-7)":
+                view = view[view[cols['dist']].between(4, 7)]
+            elif dist_filter == "Long (8+)":
+                view = view[view[cols['dist']] >= 8]
+            if zone_filter == "Own Territory":
+                view = view[view[cols['field']] <= -30]
+            elif zone_filter == "Midfield":
+                view = view[view[cols['field']].between(-29, 0)]
+            elif zone_filter == "Scoring Zone":
+                view = view[view[cols['field']] >= 1]
+
+            # ── SUMMARY BAR ──────────────────────────────
+            if not view.empty:
+                sm1, sm2, sm3, sm4, sm5 = st.columns(5)
+                sm1.metric("Plays",        len(view))
+                sm2.metric("Avg Gain",     f"{view[cols['gain']].mean():.1f} yds")
+                sm3.metric("FD Rate",      f"{round(view['Is_FD'].mean()*100)}%")
+                sm4.metric("Success Rate", f"{round(view['Is_Succ'].mean()*100)}%")
+                sm5.metric("Explosive %",  f"{round(view['Is_Explosive'].mean()*100)}%")
+            else:
+                st.warning("No plays match the selected filters.")
+
+            st.divider()
+
+            # ── PIVOT BUILDER ────────────────────────────
+            st.subheader("📊 Build Your Table")
+            pc1, pc2, pc3 = st.columns(3)
+            with pc1:
+                row_by = st.selectbox("Group by (rows)", [
+                    cols['form'], 'PERSONNEL', cols['play'],
+                    cols['dn'], cols['type'], cols['p_dir'], cols['hash']
+                ])
+            with pc2:
+                break_by = st.selectbox("Break down by (columns)", [
+                    "None", cols['type'], cols['dn'], "Distance Bucket", cols['hash'], cols['p_dir']
+                ])
+            with pc3:
+                show_val = st.selectbox("Show me", [
+                    "Avg Gain", "FD Rate %", "Success Rate %",
+                    "Explosive Rate %", "Play Count"
+                ])
+
+            # ── BUILD PIVOT ──────────────────────────────
+            if not view.empty and row_by in view.columns:
+                piv_view = view.copy()
+
+                if break_by == "Distance Bucket":
+                    piv_view['Distance Bucket'] = piv_view[cols['dist']].apply(
+                        lambda x: "Short (1-3)" if x <= 3 else ("Med (4-7)" if x <= 7 else "Long (8+)")
+                    )
+                    break_col = "Distance Bucket"
+                elif break_by == "None":
+                    break_col = None
+                else:
+                    break_col = break_by
+
+                val_map = {
+                    "Avg Gain":         cols['gain'],
+                    "FD Rate %":        'Is_FD',
+                    "Success Rate %":   'Is_Succ',
+                    "Explosive Rate %": 'Is_Explosive',
+                    "Play Count":       cols['gain'],
+                }
+                agg_map = {
+                    "Avg Gain":         'mean',
+                    "FD Rate %":        'mean',
+                    "Success Rate %":   'mean',
+                    "Explosive Rate %": 'mean',
+                    "Play Count":       'count',
+                }
+
+                val_col = val_map[show_val]
+                agg_fn  = agg_map[show_val]
+
+                if break_col and break_col in piv_view.columns:
+                    pivot_result = piv_view.pivot_table(
+                        index=row_by,
+                        columns=break_col,
+                        values=val_col,
+                        aggfunc=agg_fn
+                    )
+                    if show_val != "Play Count":
+                        pivot_result = (pivot_result * (100 if "Rate" in show_val else 1)).round(1)
+                else:
+                    if agg_fn == 'mean':
+                        pivot_result = piv_view.groupby(row_by)[val_col].mean()
+                        if "Rate" in show_val:
+                            pivot_result = (pivot_result * 100).round(1)
+                        else:
+                            pivot_result = pivot_result.round(1)
+                    else:
+                        pivot_result = piv_view.groupby(row_by)[val_col].count()
+                    pivot_result = pivot_result.to_frame(show_val)
+
+                pivot_result = pivot_result.reset_index()
+                numeric_cols = pivot_result.select_dtypes('number').columns.tolist()
+
+                st.dataframe(
+                    pivot_result.style.background_gradient(cmap='RdYlGn', subset=numeric_cols),
+                    use_container_width=True
+                )
+
+                # ── EXPORT THIS VIEW ─────────────────────
+                st.divider()
+                pivot_export = BytesIO()
+                with pd.ExcelWriter(pivot_export, engine='openpyxl') as writer:
+                    pivot_result.to_excel(writer, sheet_name='Pivot View', index=False)
+                    view.reset_index(drop=True).to_excel(writer, sheet_name='Filtered Plays', index=False)
+                st.download_button(
+                    label="⬇️ Export This View to Excel",
+                    data=pivot_export.getvalue(),
+                    file_name="FormationIQ_PivotView.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            else:
+                st.info("Select valid grouping options above to build your table.")
+
 
         # ── TAB 7: DRIVE LEVERAGE ────────────────────────────
         with tabs[7]:
