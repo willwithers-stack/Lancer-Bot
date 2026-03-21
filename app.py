@@ -10,7 +10,7 @@ from io import BytesIO
 # ============================================================
 
 def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
-                       fei_df, dir_fei, fpar_df, sss_summary,
+                       fpar_df, sss_summary,
                        sss_by_form, chain, intel_df, scout_sections,
                        cols, verdict_score):
 
@@ -192,15 +192,6 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     r += 1
     header_row(ws1, r, ["Category","Finding","Action","Stat","Priority"], bg=MED)
     exploits = []
-    if not fei_df.empty:
-        bad_fei = fei_df[fei_df['FEI_Grade'].isin(['D','F'])].head(2)
-        for idx, row in bad_fei.iterrows():
-            exploits.append([
-                "FEI",
-                f"{idx[0]} ({idx[1]}) — FEI Grade {row['FEI_Grade']}",
-                "Let them run this — they underperform their situation",
-                f"FEI: {row['FEI']}",
-                "HIGH"
             ])
     if not sss_summary.empty:
         top_sss = sss_summary.sort_values('Stress %', ascending=False).iloc[0]
@@ -233,92 +224,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     set_col_width(ws1, 5, 10)
 
     # ══════════════════════════════════════════════════════
-    # SHEET 2 — FORMATION FEI
-    # ══════════════════════════════════════════════════════
-    ws2 = wb.create_sheet("2 - Formation FEI")
-    ws2.sheet_view.showGridLines = False
-
-    ws2.merge_cells("A1:H1")
-    c = ws2["A1"]
-    c.value     = "Formation Efficiency Index (FEI) — Actual Gain vs Expected Gain by Situation"
-    c.fill      = make_fill(DARK)
-    c.font      = Font(bold=True, color=WHITE, size=14, name='Calibri')
-    c.alignment = make_align(h='center')
-    ws2.row_dimensions[1].height = 28
-    ws2.merge_cells("A1:H1")
-
-    note_row = 2
-    ws2.merge_cells(f"A{note_row}:H{note_row}")
-    c = ws2.cell(row=note_row, column=1,
-                 value="FEI > 1.0 = Outperforming situation | FEI < 1.0 = Underperforming | Grade: A≥1.4  B≥1.1  C≥0.9  D≥0.7  F<0.7 | Std FEI = Standard downs | PD FEI = Passing downs (2nd & 8+, 3rd & 5+)")
-    c.fill      = make_fill(LIGHT)
-    c.font      = Font(italic=True, color='000000', size=9, name='Calibri')
-    c.alignment = make_align(wrap=True, h='left')
-    ws2.row_dimensions[note_row].height = 30
-
-    for play_type, label in [('RUN', '🏃 RUN FORMATIONS'), ('PASS', '🎯 PASS FORMATIONS')]:
-        if play_type not in fei_df.index.get_level_values(1):
-            continue
-        sub = fei_df.xs(play_type, level=1).reset_index()
-        r = ws2.max_row + 2
-        section_title(ws2, r, label, 8, bg=MED)
-        ws2.row_dimensions[r].height = 22
-        r += 1
-        header_row(ws2, r,
-                   ["Formation","Plays","Avg Gain","Avg Expected",
-                    "FEI","Grade","Std FEI","Pass Down FEI"], bg=DARK)
-        for i, row in sub.iterrows():
-            r += 1
-            bg = GRAY if i % 2 == 0 else WHITE
-            data_row(ws2, r,
-                     [row[cols['form']], int(row['Plays']),
-                      row['Avg_Gain'], row['Avg_Expected'],
-                      row['FEI'], '', row['Std_FEI'], row['PD_FEI']],
-                     bg=bg, fg='000000')
-            grade_cell(ws2, r, 6, row['FEI_Grade'])
-
-    for col, w in zip(range(1, 9), [24, 8, 12, 14, 8, 8, 10, 14]):
-        set_col_width(ws2, col, w)
-
-    # ══════════════════════════════════════════════════════
-    # SHEET 3 — PLAY DIRECTION FEI
-    # ══════════════════════════════════════════════════════
-    ws3 = wb.create_sheet("3 - Play Direction FEI")
-    ws3.sheet_view.showGridLines = False
-
-    ws3.merge_cells("A1:G1")
-    c = ws3["A1"]
-    c.value     = "FEI by Play Direction — Which Direction Are They Attacking and Is It Working?"
-    c.fill      = make_fill(DARK)
-    c.font      = Font(bold=True, color=WHITE, size=14, name='Calibri')
-    c.alignment = make_align(h='center')
-    ws3.row_dimensions[1].height = 28
-
-    if not dir_fei.empty:
-        for play_type, label in [('RUN', '🏃 RUN DIRECTION'), ('PASS', '🎯 PASS DIRECTION')]:
-            if play_type not in dir_fei.index.get_level_values(1):
-                continue
-            sub = dir_fei.xs(play_type, level=1).reset_index()
-            r = ws3.max_row + 2
-            section_title(ws3, r, label, 7, bg=MED)
-            r += 1
-            header_row(ws3, r,
-                       ["Formation","Direction","Plays","Avg Gain",
-                        "Avg Expected","FEI","Grade"], bg=DARK)
-            for i, row in sub.iterrows():
-                r += 1
-                bg = GRAY if i % 2 == 0 else WHITE
-                data_row(ws3, r,
-                         [row[cols['form']], row['Dir'], int(row['Plays']),
-                          row['Avg_Gain'], row['Avg_Expected'], row['FEI'], ''],
-                         bg=bg, fg='000000')
-                grade_cell(ws3, r, 7, row['Grade'])
-
-    for col, w in zip(range(1, 8), [24, 10, 8, 12, 14, 8, 8]):
-        set_col_width(ws3, col, w)
-
-    # ══════════════════════════════════════════════════════
-    # SHEET 4 — PERSONNEL ANALYSIS
+    # SHEET 2 — PERSONNEL ANALYSIS
     # ══════════════════════════════════════════════════════
     ws4 = wb.create_sheet("4 - Personnel Analysis")
     ws4.sheet_view.showGridLines = False
@@ -354,7 +260,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
         set_col_width(ws4, col, w)
 
     # ══════════════════════════════════════════════════════
-    # SHEET 5 — SITUATIONAL BREAKDOWNS
+    # SHEET 3 — SITUATIONAL BREAKDOWNS
     # ══════════════════════════════════════════════════════
     ws5 = wb.create_sheet("5 - Situational Breakdowns")
     ws5.sheet_view.showGridLines = False
@@ -415,7 +321,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
         set_col_width(ws5, col, w)
 
     # ══════════════════════════════════════════════════════
-    # SHEET 6 — AI SCOUTING INTELLIGENCE
+    # SHEET 4 — AI SCOUTING INTELLIGENCE
     # ══════════════════════════════════════════════════════
     ws6 = wb.create_sheet("6 - AI Scouting Intelligence")
     ws6.sheet_view.showGridLines = False
@@ -451,7 +357,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
         set_col_width(ws6, col, w)
 
     # ══════════════════════════════════════════════════════
-    # SHEET 7 — SCOUT REPORT
+    # SHEET 5 — SCOUT REPORT
     # ══════════════════════════════════════════════════════
     ws7 = wb.create_sheet("7 - Scout Report")
     ws7.sheet_view.showGridLines = False
@@ -489,7 +395,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     ws7.column_dimensions['B'].width = 80
 
     # ══════════════════════════════════════════════════════
-    # SHEET 8 — RAW PLAY-BY-PLAY
+    # SHEET 6 — RAW PLAY-BY-PLAY
     # ══════════════════════════════════════════════════════
     ws8 = wb.create_sheet("8 - Play by Play")
     ws8.sheet_view.showGridLines = True
@@ -645,76 +551,6 @@ def build_sss(p_data, cols):
         sss_by_form = pd.DataFrame()
     return sss_df, sss_summary, sss_by_form
 
-
-def build_fei(p_data, cols):
-    df_f = p_data.copy()
-    df_f['Dist_Bucket']   = df_f.apply(lambda r: dist_bucket(r[cols['dn']], r[cols['dist']]), axis=1)
-    df_f['Expected_Gain'] = df_f['Dist_Bucket'].map(EXPECTED_GAIN).fillna(4.0)
-
-    # Standard vs Passing down flag
-    def is_pass_down(row):
-        d, dist = row[cols['dn']], row[cols['dist']]
-        if d == 1: return False
-        if d == 2: return dist >= 8
-        if d in (3, 4): return dist >= 5
-        return False
-
-    df_f['Is_Pass_Down'] = df_f.apply(is_pass_down, axis=1)
-
-    # Base FEI
-    fei_df = (
-        df_f.groupby([cols['form'], cols['type']])
-        .agg(Plays=(cols['gain'],'count'), Avg_Gain=(cols['gain'],'mean'), Avg_Expected=('Expected_Gain','mean'))
-        .round(2)
-    )
-    fei_df = fei_df[fei_df['Plays'] >= 4]
-    fei_df['FEI'] = (fei_df['Avg_Gain'] / fei_df['Avg_Expected']).round(2)
-    fei_df['FEI_Grade'] = fei_df['FEI'].apply(
-        lambda x: 'A' if x >= 1.4 else ('B' if x >= 1.1 else ('C' if x >= 0.9 else ('D' if x >= 0.7 else 'F')))
-    )
-
-    # Std Down FEI
-    std = df_f[df_f['Is_Pass_Down'] == False].groupby([cols['form'], cols['type']]).agg(
-        Std_Gain=(cols['gain'],'mean'), Std_Exp=('Expected_Gain','mean'), Std_Plays=(cols['gain'],'count')
-    ).round(2)
-    std['Std_FEI'] = (std['Std_Gain'] / std['Std_Exp']).round(2)
-
-    # Pass Down FEI
-    pas = df_f[df_f['Is_Pass_Down'] == True].groupby([cols['form'], cols['type']]).agg(
-        PD_Gain=(cols['gain'],'mean'), PD_Exp=('Expected_Gain','mean'), PD_Plays=(cols['gain'],'count')
-    ).round(2)
-    pas['PD_FEI'] = (pas['PD_Gain'] / pas['PD_Exp']).round(2)
-
-    fei_df = fei_df.join(std[['Std_FEI', 'Std_Plays']], how='left')
-    fei_df = fei_df.join(pas[['PD_FEI', 'PD_Plays']], how='left')
-    fei_df['Std_FEI'] = fei_df['Std_FEI'].fillna(0.0).astype(float)
-    fei_df['PD_FEI']  = fei_df['PD_FEI'].fillna(0.0).astype(float)
-
-
-    # Play Direction FEI
-    if cols['p_dir'] in df_f.columns:
-        df_f['Dir'] = df_f[cols['p_dir']].astype(str).str.upper().str.strip()
-        df_f['Dir'] = df_f['Dir'].apply(
-            lambda x: 'LEFT' if 'L' in x else ('RIGHT' if 'R' in x else ('MIDDLE' if 'M' in x else 'UNKNOWN'))
-        )
-        dir_fei = (
-            df_f[df_f['Dir'] != 'UNKNOWN']
-            .groupby([cols['form'], cols['type'], 'Dir'])
-            .agg(Plays=(cols['gain'],'count'), Avg_Gain=(cols['gain'],'mean'), Avg_Expected=('Expected_Gain','mean'))
-            .round(2)
-        )
-        dir_fei = dir_fei[dir_fei['Plays'] >= 3]
-        dir_fei['FEI'] = (dir_fei['Avg_Gain'] / dir_fei['Avg_Expected']).round(2)
-        dir_fei['Grade'] = dir_fei['FEI'].apply(
-            lambda x: 'A' if x >= 1.4 else ('B' if x >= 1.1 else ('C' if x >= 0.9 else ('D' if x >= 0.7 else 'F')))
-        )
-    else:
-        dir_fei = pd.DataFrame()
-
-    return fei_df.sort_values('FEI', ascending=False), dir_fei
-
-
-
 def build_fpar(p_data, cols):
     df_p = p_data.copy()
     def field_zone(yl):
@@ -853,7 +689,7 @@ def build_intel(p_data, df, cols):
 # SCOUT REPORT GENERATOR
 # ============================================================
 
-def generate_scout_report(p_data, drive_dla, pers_dla, fei_df,
+def generate_scout_report(p_data, drive_dla, pers_dla,
                            fpar_df, sss_summary, sss_by_form,
                            chain, cols):
     lines = []
@@ -918,21 +754,6 @@ Primary group: **{primary}** ({primary_pct}% of plays, {primary_run}% run / {pri
 {worst_note}
 
 ⚠️ **Exploit:** When their low-DLS personnel aligns, they are already in a self-created stress situation — apply pressure, don't give up the conversion.
-"""))
-
-    if not fei_df.empty:
-        top_fei = fei_df[fei_df['FEI_Grade'].isin(['A','B'])].head(3)
-        bot_fei = fei_df[fei_df['FEI_Grade'].isin(['D','F'])].tail(3)
-        top_text = "\n".join([f"- **{idx[0]} ({idx[1]})** — FEI: {row['FEI']} ({row['FEI_Grade']}), Avg Gain: {row['Avg_Gain']}" for idx, row in top_fei.iterrows()]) if not top_fei.empty else "- None detected."
-        bot_text = "\n".join([f"- **{idx[0]} ({idx[1]})** — FEI: {row['FEI']} ({row['FEI_Grade']}), Avg Gain: {row['Avg_Gain']}" for idx, row in bot_fei.iterrows()]) if not bot_fei.empty else "- None detected."
-        lines.append(("📊 Formation Efficiency (FEI)", f"""
-**Danger formations (outperforming their situation):**
-{top_text}
-
-**Exploitable formations (underperforming their situation):**
-{bot_text}
-
-⚠️ **Exploit:** When they align in their low-FEI formations, the data says they do not execute — even when down/distance appears manageable.
 """))
 
     if not sss_summary.empty:
@@ -1157,7 +978,6 @@ if uploaded_file:
         pf_dla = pf_dla[pf_dla['Plays'] >= 5]
 
         sss_df, sss_summary, sss_by_form = build_sss(p_data, cols)
-        fei_df, dir_fei  = build_fei(p_data, cols)
         fpar_df = build_fpar(p_data, cols)
         intel_df = build_intel(p_data, df, cols)
 
@@ -1180,7 +1000,7 @@ if uploaded_file:
             t3_summary = pd.DataFrame()
 
         scout_sections = generate_scout_report(
-            p_data, drive_dla, pers_dla, fei_df,
+            p_data, drive_dla, pers_dla,
             fpar_df, sss_summary, sss_by_form, chain, cols
         )
         verdict_score = 0
@@ -1203,7 +1023,6 @@ if uploaded_file:
             "Drive Leverage-Pers+Form":   pf_dla,
             "Sequence Stress Score":      sss_summary,
             "Stress by Formation":        sss_by_form,
-            "Formation Efficiency Index": fei_df.reset_index(),
             "Field Position Aggression":  fpar_df.reset_index(),
             "AI Scouting Intelligence":   intel_df,
         }
@@ -1221,7 +1040,7 @@ if uploaded_file:
             st.subheader("⬇️ Download Full Report")
             excel_data = build_excel_export(
                 export_options, p_data, drive_dla, pers_dla,
-                fei_df, dir_fei, fpar_df, sss_summary,
+                fpar_df, sss_summary,
                 sss_by_form, chain, intel_df, scout_sections,
                 cols, verdict_score
             )
@@ -1316,44 +1135,6 @@ which prior play type or formation caused the stress.
 - 1st & 10 → incomplete pass (0 yds) → 2nd & 10 → run for 2 yds → **3rd & 8** ← stress situation
 - SSS tags the 2nd down run as the cause of the 3rd & 8
 > Use this to find the **root cause** of drive breakdowns — not just the symptom.
-""")
-            st.divider()
-
-            st.subheader("📐 Formation Efficiency Index (FEI)")
-            st.markdown("""
-Compares actual average gain to the **expected gain** for the down/distance
-situation that formation was used in — removing the bias of easy situations.
-
-**How expected gain is calculated:**
-Each play is bucketed by down and distance. Each bucket has a baseline
-expected gain from typical high school production:
-
-| Down | Distance | Expected Gain |
-|---|---|---|
-| 1st | 1–5 yds | 3.5 yds |
-| 1st | 6–10 yds | 4.2 yds |
-| 1st | 11+ yds | 3.0 yds |
-| 2nd | 1–3 yds | 3.0 yds |
-| 2nd | 4–7 yds | 4.5 yds |
-| 2nd | 8+ yds | 5.5 yds |
-| 3rd | 1–2 yds | 2.5 yds |
-| 3rd | 3–6 yds | 5.0 yds |
-| 3rd | 7+ yds | 7.0 yds |
-| 4th | 1–2 yds | 2.0 yds |
-| 4th | 3+ yds | 5.0 yds |
-
-**FEI = Actual Avg Gain ÷ Expected Avg Gain**
-
-**Example:**
-Formation used 10 times — 6 on 1st & 10 (expected 4.2) and 4 on 2nd & 4 (expected 4.5).
-Weighted avg expected = 4.3 yds. Actual avg = 6.1 yds. **FEI = 6.1 ÷ 4.3 = 1.42 → Grade A.**
-
-**Why raw yardage misleads:**
-A formation averaging 5.0 yds on 1st & 5 situations (expected 3.5) = **FEI 1.43 → Elite.**
-The same 5.0 yds on 3rd & 7+ (expected 7.0) = **FEI 0.71 → Failing.**
-Same number. Completely different story.
-
-**Grade:** A ≥ 1.4 | B ≥ 1.1 | C ≥ 0.9 | D ≥ 0.7 | F < 0.7
 """)
             st.divider()
 
@@ -1515,50 +1296,6 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                     st.dataframe(sss_display, use_container_width=False)
             else:
                 st.info("No 3rd & long stress situations found.")
-
-            st.divider()
-            st.subheader("📐 Formation Efficiency Index (FEI)")
-            st.caption("FEI > 1.0 = outperforming situation. FEI < 1.0 = underperforming.")
-            if not fei_df.empty:
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.write("**🏃 Run FEI**")
-                    run_fei = fei_df.xs('RUN', level=1) if 'RUN' in fei_df.index.get_level_values(1) else pd.DataFrame()
-                    if not run_fei.empty:
-                        st.dataframe(run_fei[['Plays','FEI','FEI_Grade','Std_FEI','PD_FEI']].style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
-                with c2:
-                    st.write("**🎯 Pass FEI**")
-                    pass_fei = fei_df.xs('PASS', level=1) if 'PASS' in fei_df.index.get_level_values(1) else pd.DataFrame()
-                    if not pass_fei.empty:
-                        st.dataframe(pass_fei[['Plays','FEI','FEI_Grade','Std_FEI','PD_FEI']].style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
-
-                if not dir_fei.empty:
-                    st.divider()
-                    st.write("**🧭 FEI by Play Direction**")
-                    st.caption("Which direction are they attacking and is it actually working?")
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        st.write("**🏃 Run Direction**")
-                        run_dir = dir_fei.xs('RUN', level=1) if 'RUN' in dir_fei.index.get_level_values(1) else pd.DataFrame()
-                        if not run_dir.empty:
-                            rd = run_dir[['Plays','Avg_Gain','FEI','Grade']].copy().reset_index()
-                            rd = rd.astype({c: str for c in rd.select_dtypes('object').columns})
-                            rd['Plays']    = pd.to_numeric(rd['Plays'],    errors='coerce')
-                            rd['Avg_Gain'] = pd.to_numeric(rd['Avg_Gain'], errors='coerce')
-                            rd['FEI']      = pd.to_numeric(rd['FEI'],      errors='coerce')
-                            st.dataframe(rd.style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
-                    with c2:
-                        st.write("**🎯 Pass Direction**")
-                        pass_dir = dir_fei.xs('PASS', level=1) if 'PASS' in dir_fei.index.get_level_values(1) else pd.DataFrame()
-                        if not pass_dir.empty:
-                            pd2 = pass_dir[['Plays','Avg_Gain','FEI','Grade']].copy().reset_index()
-                            pd2 = pd2.astype({c: str for c in pd2.select_dtypes('object').columns})
-                            pd2['Plays']    = pd.to_numeric(pd2['Plays'],    errors='coerce')
-                            pd2['Avg_Gain'] = pd.to_numeric(pd2['Avg_Gain'], errors='coerce')
-                            pd2['FEI']      = pd.to_numeric(pd2['FEI'],      errors='coerce')
-                            st.dataframe(pd2.style.background_gradient(cmap='RdYlGn', subset=['FEI']), use_container_width=False)
-            else:
-                st.info("Not enough play volume for FEI (min 4 plays per formation/type).")
 
             st.divider()
             st.subheader("🗺️ Field Position Aggression Rating (FPAR)")
