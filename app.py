@@ -1327,9 +1327,8 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
 
         # ── TAB 6: PIVOT LAB ─────────────────────────────────
         with tabs[6]:
-                       st.header("🧪 Pivot Lab")
+            st.header("🧪 Pivot Lab")
             st.caption("Build your own custom views. Filter, group, and export any combination of data.")
-
             # ── FILTERS ─────────────────────────────────
             st.subheader("🔽 Filters")
             fc1, fc2, fc3, fc4 = st.columns(4)
