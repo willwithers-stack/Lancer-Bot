@@ -1258,8 +1258,8 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
         # ── TAB 4: RED/GREEN ZONE ────────────────────────────
         with tabs[4]:
             st.header("🟢 Red/Green Zone")
-            rz = p_data[p_data[cols['field']].between(1, 10)].copy()
-            gz = p_data[p_data[cols['field']].between(11, 20)].copy()
+            rz = p_data[p_data[cols['field']].between(11, 20)].copy()
+            gz = p_data[p_data[cols['field']].between(1, 10)].copy()
             c1, c2 = st.columns(2)
             with c1:
                 st.subheader("🔴 Red Zone (1-10)")
