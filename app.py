@@ -1082,7 +1082,7 @@ if uploaded_file:
             sss_df[cols['form']] = sss_df[cols['form']].astype(str)
         if not sss_by_form.empty:
             sss_by_form.index = sss_by_form.index.astype(str)
-       fpar_df = build_fpar(p_data, cols)
+        fpar_df = build_fpar(p_data, cols)
         intel_df = build_intel(p_data, df, cols)
         chain.columns = ['First Downs','Plays']
         chain['FD Rate %']      = (chain['First Downs'] / chain['Plays'] * 100).round(0).astype(int)
