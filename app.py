@@ -1567,7 +1567,7 @@ Two-digit code: RBs + TEs on the field. Remaining skill players = WRs.
         #  TAB 8: DRIVE LEVERAGE 
         with tabs[8]:
           # TAB 8: DRIVE LEVERAGE
-with tabs[8]:
+        with tabs[8]:
     st.header("🏈 Drive Leverage Score (DLS)")
 
     if drive_dla.empty:
