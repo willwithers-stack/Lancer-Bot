@@ -1133,7 +1133,7 @@ if uploaded_file:
             "Definitions", "Personnel Identity", "3rd Down Efficiency",
             "Chain Moving", "Red/Green Zone", "Winning Probability",
             "Pivot Lab", "Bill Walsh", "Drive Leverage (DLA)", "Scout Report"
-        }
+        ])
 
         # ── SIDEBAR ─────────────────────────────────────────
         with st.sidebar:
