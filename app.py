@@ -1550,8 +1550,32 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             else:
                 st.info("Select valid grouping options above to build your table.")
 
+# ── TAB 7: BILL WALSH ASSISTANT ───────────────────────
+with tabs[7]:
+    st.header("🧠 Bill Walsh Assistant")
+    st.caption("Ask questions about this opponent. Answers are from a coach modeled after Bill Walsh.")
 
-        # ── TAB 7: DRIVE LEVERAGE ────────────────────────────
+    if "walsh_chat" not in st.session_state:
+        st.session_state.walsh_chat = []
+
+    current_view = view if "view" in locals() else p_data
+
+    for msg in st.session_state.walsh_chat:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    question = st.chat_input("Ask about tendencies, game plan, or how to attack this defense...")
+
+    if question:
+        st.session_state.walsh_chat.append({"role": "user", "content": question})
+        with st.spinner("Coach Walsh is reviewing the film..."):
+            summary_text = summarize_view(current_view)
+            answer = call_walsh_llm(summary_text, question)
+        st.session_state.walsh_chat.append({"role": "assistant", "content": answer})
+        with st.chat_message("assistant"):
+            st.markdown(answer)
+
+        # ── TAB 8: DRIVE LEVERAGE ────────────────────────────
         with tabs[7]:
             st.header("📐 Drive Leverage Score (DLS)")
             st.subheader("Per-Drive Summary")
@@ -1568,7 +1592,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                         pf_display[col] = pd.to_numeric(pf_display[col], errors='coerce')
                 st.dataframe(pf_display.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
 
-        # ── TAB 8: SCOUT REPORT ──────────────────────────────
+        # ── TAB 9: SCOUT REPORT ──────────────────────────────
         with tabs[8]:
             st.header("🕵️ Opponent Scout Report")
             st.caption("Auto-generated executive overview based on FormationIQ analysis. Use this as your coaching staff briefing.")
