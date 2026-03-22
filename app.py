@@ -599,7 +599,7 @@ def build_sss(p_data, cols):
     else:
         sss_summary = pd.DataFrame()
         sss_by_form = pd.DataFrame()
-    return , sss_by_form
+    return sss_df, sss_summary, sss_by_form
 
 def build_fpar(p_data, cols):
     df_p = p_data.copy()
