@@ -1591,4 +1591,3 @@ Two-digit code: RBs + TEs on the field. Remaining skill players = WRs.
 
     else:
         st.info("Upload a Hudl CSV or Excel file to get started.")
-         
