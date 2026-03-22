@@ -10,22 +10,22 @@ client = OpenAI()
 You are a defensive coordinator modeled after Vic Fangio.
 
 Background:
-- Legendary NFL defensive coordinator known for disguising coverages and confusing quarterbacks.
-- Built defenses around pattern-matching zone concepts that look like man coverage pre-snap.
-- Emphasizes stopping the run first, controlling the line of scrimmage, and making quarterbacks uncomfortable.
-- Known for meticulous preparation and exploiting offensive tendencies.
+-- Legendary NFL defensive coordinator known for disguising coverages and confusing quarterbacks.
+-- Built defenses around pattern--matching zone concepts that look like man coverage pre--snap.
+-- Emphasizes stopping the run first, controlling the line of scrimmage, and making quarterbacks uncomfortable.
+-- Known for meticulous preparation and exploiting offensive tendencies.
 
 Style:
-- Direct, no-nonsense, and detail-oriented.
-- Use specific terminology: cover 2, quarters, pattern-match, two-high shell, box count, leverage.
-- Focus on taking away the opponents best play and forcing them into uncomfortable situations.
+-- Direct, no--nonsense, and detail--oriented.
+-- Use specific terminology: cover 2, quarters, pattern--match, two--high shell, box count, leverage.
+-- Focus on taking away the opponents best play and forcing them into uncomfortable situations.
 
 When a coach asks a question:
 1. Identify the offensive tendency most relevant to the question.
-2. Give 3-6 concrete defensive adjustments or game-plan points in bullets.
+2. Give 3--6 concrete defensive adjustments or game--plan points in bullets.
 3. Keep it concise enough to scan quickly before a game.
 """
-def summarize_view(df: pd.DataFrame) -> str:
+def summarize_view(df: pd.DataFrame) --> str:
     if df.empty:
         return "No plays in view."
     total = len(df)
@@ -43,9 +43,9 @@ def summarize_view(df: pd.DataFrame) -> str:
     ]
     return "\n".join(lines)
 
-def call_fangio_llm(summary_text: str, question: str) -> str:
+def call_fangio_llm(summary_text: str, question: str) --> str:
     resp = client.responses.create(
-        model="gpt-4.1-mini",
+        model="gpt--4.1--mini",
         input=[
             {"role": "system", "content": FANGIO_SYSTEM_PROMPT},
             {"role": "user",
@@ -112,7 +112,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
         for i, val in enumerate(values, 1):
             c = ws.cell(row=row_num, column=i, value=val)
             c.fill    = make_fill(bg)
-            c.font    = Font(bold=bold, color=fg, size=sizes[i-1] if sizes else 11, name='Calibri')
+            c.font    = Font(bold=bold, color=fg, size=sizes[i--1] if sizes else 11, name='Calibri')
             c.alignment = make_align(h='center')
             c.border  = make_border()
 
@@ -163,7 +163,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     # ══════════════════════════════════════════════════════
     # SHEET 1 — EXECUTIVE SUMMARY
     # ══════════════════════════════════════════════════════
-    ws1 = wb.create_sheet("1 - Executive Summary")
+    ws1 = wb.create_sheet("1 -- Executive Summary")
     ws1.sheet_view.showGridLines = False
 
     # Title banner
@@ -226,7 +226,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
 
     # Top chain movers
     r += 2
-    section_title(ws1, r, "TOP CHAIN-MOVING PLAYS", 4)
+    section_title(ws1, r, "TOP CHAIN--MOVING PLAYS", 4)
     r += 1
     header_row(ws1, r, ["Play","Plays","FD Rate %","Success Rate %"], bg=MED)
     for i, (play, row) in enumerate(chain.head(5).iterrows()):
@@ -275,7 +275,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     # ══════════════════════════════════════════════════════
     # SHEET 2 — PERSONNEL ANALYSIS
     # ══════════════════════════════════════════════════════
-    ws4 = wb.create_sheet("4 - Personnel Analysis")
+    ws4 = wb.create_sheet("4 -- Personnel Analysis")
     ws4.sheet_view.showGridLines = False
 
     ws4.merge_cells("A1:J1")
@@ -311,7 +311,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     # ══════════════════════════════════════════════════════
     # SHEET 3 — SITUATIONAL BREAKDOWNS
     # ══════════════════════════════════════════════════════
-    ws5 = wb.create_sheet("5 - Situational Breakdowns")
+    ws5 = wb.create_sheet("5 -- Situational Breakdowns")
     ws5.sheet_view.showGridLines = False
 
     ws5.merge_cells("A1:F1")
@@ -326,8 +326,8 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     t3 = p_data[p_data[cols['dn']] == 3].copy()
     if not t3.empty:
         t3['Sit'] = t3[cols['dist']].apply(
-            lambda x: "3rd & Short (1-3)" if x <= 3 else
-                      ("3rd & Mid (4-7)" if x <= 7 else "3rd & Long (7+)")
+            lambda x: "3rd & Short (1--3)" if x <= 3 else
+                      ("3rd & Mid (4--7)" if x <= 7 else "3rd & Long (7+)")
         )
         r = 3
         section_title(ws5, r, "3RD DOWN EFFICIENCY", 5, bg=MED)
@@ -335,7 +335,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
         header_row(ws5, r,
                    ["Situation","Plays","Conv Rate %","Run %","Pass %"],
                    bg=DARK)
-        for sit in ["3rd & Short (1-3)", "3rd & Mid (4-7)", "3rd & Long (7+)"]:
+        for sit in ["3rd & Short (1--3)", "3rd & Mid (4--7)", "3rd & Long (7+)"]:
             sub = t3[t3['Sit'] == sit]
             if not sub.empty:
                 r += 1
@@ -372,12 +372,12 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     # ══════════════════════════════════════════════════════
     # SHEET 4 — AI SCOUTING INTELLIGENCE
     # ══════════════════════════════════════════════════════
-    ws6 = wb.create_sheet("6 - AI Scouting Intelligence")
+    ws6 = wb.create_sheet("6 -- AI Scouting Intelligence")
     ws6.sheet_view.showGridLines = False
 
     ws6.merge_cells("A1:D1")
     c = ws6["A1"]
-    c.value     = "AI Scouting Intelligence — Auto-Detected Behavioral Patterns & Tendencies"
+    c.value     = "AI Scouting Intelligence — Auto--Detected Behavioral Patterns & Tendencies"
     c.fill      = make_fill(DARK)
     c.font      = Font(bold=True, color=WHITE, size=14, name='Calibri')
     c.alignment = make_align(h='center')
@@ -408,7 +408,7 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     # ══════════════════════════════════════════════════════
     # SHEET 5 — SCOUT REPORT
     # ══════════════════════════════════════════════════════
-    ws7 = wb.create_sheet("7 - Scout Report")
+    ws7 = wb.create_sheet("7 -- Scout Report")
     ws7.sheet_view.showGridLines = False
 
     ws7.merge_cells("A1:B1")
@@ -444,9 +444,9 @@ def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
     ws7.column_dimensions['B'].width = 80
 
     # ══════════════════════════════════════════════════════
-    # SHEET 6 — RAW PLAY-BY-PLAY
+    # SHEET 6 — RAW PLAY--BY--PLAY
     # ══════════════════════════════════════════════════════
-    ws8 = wb.create_sheet("8 - Play by Play")
+    ws8 = wb.create_sheet("8 -- Play by Play")
     ws8.sheet_view.showGridLines = True
     ws8.auto_filter.ref = f"A1:{get_column_letter(len(p_data.columns))}{len(p_data)+1}"
 
@@ -481,15 +481,15 @@ def classify_leverage(dn, dist, yard_ln=None):
     if d == 1:
         if y <= 5:    base = 2
         elif y <= 10: base = 1
-        else:         base = -1
+        else:         base = --1
     elif d == 2:
         if y <= 3:    base = 2
         elif y <= 7:  base = 1
-        else:         base = -1
+        else:         base = --1
     elif d in (3, 4):
         if y <= 2:    base = 2
         elif y <= 6:  base = 0
-        else:         base = -2
+        else:         base = --2
     else:
         return "Unknown", 0
     modifier = 0.0
@@ -497,13 +497,13 @@ def classify_leverage(dn, dist, yard_ln=None):
         try:
             yl = int(yard_ln)
             if 1 <= yl <= 20:  modifier = +0.5
-            elif yl <= -30:    modifier = -0.5
+            elif yl <= --30:    modifier = --0.5
         except (ValueError, TypeError):
             pass
     score = base + modifier
     if score >= 1.5:    band = "High"
     elif score >= 0.5:  band = "Med"
-    elif score >= -0.5: band = "Neutral"
+    elif score >= --0.5: band = "Neutral"
     else:               band = "Low"
     return band, round(score, 1)
 
@@ -534,33 +534,33 @@ def dls_grade(x):
     if x >= 1.5:  return "A"
     if x >= 0.8:  return "B"
     if x >= 0.2:  return "C"
-    if x >= -0.5: return "D"
+    if x >= --0.5: return "D"
     return "F"
 
 
 EXPECTED_GAIN = {
-    (1,'1-5'):3.5,(1,'6-10'):4.2,(1,'11+'):3.0,
-    (2,'1-3'):3.0,(2,'4-7'):4.5,(2,'8+'):5.5,
-    (3,'1-2'):2.5,(3,'3-6'):5.0,(3,'7+'):7.0,
-    (4,'1-2'):2.0,(4,'3+'):5.0,
+    (1,'1--5'):3.5,(1,'6--10'):4.2,(1,'11+'):3.0,
+    (2,'1--3'):3.0,(2,'4--7'):4.5,(2,'8+'):5.5,
+    (3,'1--2'):2.5,(3,'3--6'):5.0,(3,'7+'):7.0,
+    (4,'1--2'):2.0,(4,'3+'):5.0,
 }
 
 def dist_bucket(dn, dist):
     d, y = int(dn), int(dist)
     if d == 1:
-        if y <= 5: return (1,'1-5')
-        elif y <= 10: return (1,'6-10')
+        if y <= 5: return (1,'1--5')
+        elif y <= 10: return (1,'6--10')
         else: return (1,'11+')
     elif d == 2:
-        if y <= 3: return (2,'1-3')
-        elif y <= 7: return (2,'4-7')
+        if y <= 3: return (2,'1--3')
+        elif y <= 7: return (2,'4--7')
         else: return (2,'8+')
     elif d == 3:
-        if y <= 2: return (3,'1-2')
-        elif y <= 6: return (3,'3-6')
+        if y <= 2: return (3,'1--2')
+        elif y <= 6: return (3,'3--6')
         else: return (3,'7+')
     elif d == 4:
-        if y <= 2: return (4,'1-2')
+        if y <= 2: return (4,'1--2')
         else: return (4,'3+')
     return None
 
@@ -571,7 +571,7 @@ def build_sss(p_data, cols):
     causes = []
     for idx in stress.index:
         if idx > 0:
-            prev = df_s.loc[idx - 1]
+            prev = df_s.loc[idx -- 1]
             causes.append({
                 'Stress_Situation': f"3rd & {df_s.loc[idx, cols['dist']]}",
                 'Caused_By_Play':   prev[cols['play']],
@@ -604,9 +604,9 @@ def build_fpar(p_data, cols):
     df_p = p_data.copy()
     def field_zone(yl):
         y = int(yl)
-        if y <= -30:  return "Backed Up (own 30-)"
-        elif y <= 0:  return "Own Territory (30-50)"
-        elif y <= 20: return "Opp Territory (50-opp30)"
+        if y <= --30:  return "Backed Up (own 30--)"
+        elif y <= 0:  return "Own Territory (30--50)"
+        elif y <= 20: return "Opp Territory (50--opp30)"
         else:         return "Scoring Zone (opp 20+)"
     df_p['Field_Zone'] = df_p[cols['field']].apply(field_zone)
     df_p['Is_Pass']    = (df_p[cols['type']] == 'PASS').astype(int)
@@ -621,8 +621,8 @@ def build_fpar(p_data, cols):
     fpar_df['FD_Rate']      = (fpar_df['FD_Rate']      * 100).round(0).astype(int)
     fpar_df['Avg_Gain']     = fpar_df['Avg_Gain'].round(1)
     zone_order = {
-        "Backed Up (own 30-)":1,"Own Territory (30-50)":2,
-        "Opp Territory (50-opp30)":3,"Scoring Zone (opp 20+)":4
+        "Backed Up (own 30--)":1,"Own Territory (30--50)":2,
+        "Opp Territory (50--opp30)":3,"Scoring Zone (opp 20+)":4
     }
     fpar_df['Zone_Order'] = fpar_df.index.get_level_values('Field_Zone').map(zone_order)
     return fpar_df.sort_values(['Zone_Order', cols['dn']]).drop(columns='Zone_Order')
@@ -632,18 +632,18 @@ def build_intel(p_data, df, cols):
     intel = []
     total = len(p_data)
 
-    # 1. Post-sack tendency
+    # 1. Post--sack tendency
     if cols['result'] in df.columns:
         sack_mask = (
             df[cols['result']].str.contains('Sack', case=False, na=False) |
-            ((df[cols['type']] == 'PASS') & (df[cols['gain']] <= -4))
+            ((df[cols['type']] == 'PASS') & (df[cols['gain']] <= --4))
         )
         post_sack = df.loc[[i+1 for i in df[sack_mask].index if i+1 in df.index]]
         if not post_sack.empty:
             rate = round((post_sack[cols['type']].str.upper() == 'RUN').mean() * 100)
             intel.append({
                 "Category": "Sequence",
-                "Signal": "Post-Sack Play Call",
+                "Signal": "Post--Sack Play Call",
                 "Stat": f"{rate}% RUN",
                 "Coaching Note": "They run to get back on schedule after a sack — apply run blitz immediately after pressure" if rate >= 60 else "They keep passing after a sack — bring pressure again, they won't adjust",
             })
@@ -656,7 +656,7 @@ def build_intel(p_data, df, cols):
             "Category": "Tendency",
             "Signal": "1st Down Pass Rate",
             "Stat": f"{fd_pass_rate}%",
-            "Coaching Note": "Pass-first on early downs — show two-high shell to bait short completions, then rally" if fd_pass_rate >= 55 else "Run-first on 1st down — load the box, force them to prove they can pass",
+            "Coaching Note": "Pass--first on early downs — show two--high shell to bait short completions, then rally" if fd_pass_rate >= 55 else "Run--first on 1st down — load the box, force them to prove they can pass",
         })
 
     # 3. 3rd & short conversion
@@ -667,7 +667,7 @@ def build_intel(p_data, df, cols):
             "Category": "Efficiency",
             "Signal": "3rd & Short Conversion (1–3 yds)",
             "Stat": f"{conv_rate}%",
-            "Coaching Note": "Dangerous in short-yardage — commit extra defender at line of scrimmage" if conv_rate >= 70 else "Stoppable in short-yardage — they struggle to get the tough yards when it matters",
+            "Coaching Note": "Dangerous in short--yardage — commit extra defender at line of scrimmage" if conv_rate >= 70 else "Stoppable in short--yardage — they struggle to get the tough yards when it matters",
         })
 
     # 4. Motion rate and delta
@@ -680,10 +680,10 @@ def build_intel(p_data, df, cols):
         if not motion_plays.empty:
             motion_succ    = round(motion_plays['Is_Succ'].mean() * 100)
             no_motion_succ = round(p_data[~p_data.index.isin(motion_plays.index)]['Is_Succ'].mean() * 100)
-            delta = motion_succ - no_motion_succ
+            delta = motion_succ -- no_motion_succ
             intel.append({
                 "Category": "Scheme",
-                "Signal": "Pre-Snap Motion Rate",
+                "Signal": "Pre--Snap Motion Rate",
                 "Stat": f"{motion_rate}% of plays",
                 "Coaching Note": f"Motion adds +{delta}% success — disrupt at the snap, don't let them get free releases" if delta >= 5 else f"Motion not meaningfully helping (Δ{delta}%) — don't overreact to motion keys",
             })
@@ -695,7 +695,7 @@ def build_intel(p_data, df, cols):
         "Category": "Identity",
         "Signal": "Explosive Play Dependency",
         "Stat": f"{exp_rate}% of plays ≥15 yds",
-        "Coaching Note": f"Big-play dependent — eliminate explosives and their non-explosive avg drops to {non_exp_avg} yds/play" if exp_rate >= 12 else f"Not big-play dependent — they grind consistently ({non_exp_avg} yds/play without explosives)",
+        "Coaching Note": f"Big--play dependent — eliminate explosives and their non--explosive avg drops to {non_exp_avg} yds/play" if exp_rate >= 12 else f"Not big--play dependent — they grind consistently ({non_exp_avg} yds/play without explosives)",
     })
 
     # 6. Red/green zone pass rate
@@ -707,17 +707,17 @@ def build_intel(p_data, df, cols):
             "Category": "Red Zone",
             "Signal": "Scoring Zone Pass Rate (inside 20)",
             "Stat": f"{rz_pass_rate}% PASS | {rz_succ}% success",
-            "Coaching Note": "Pass-heavy in scoring position — play press man, disrupt route timing" if rz_pass_rate >= 55 else "Run-heavy in scoring position — stack the box, force them to throw it in",
+            "Coaching Note": "Pass--heavy in scoring position — play press man, disrupt route timing" if rz_pass_rate >= 55 else "Run--heavy in scoring position — stack the box, force them to throw it in",
         })
 
     # 7. 1st down plays creating 2nd & long
     if not first_downs.empty:
         created_2nd_long = round((first_downs[cols['gain']] <= 2).mean() * 100)
         intel.append({
-            "Category": "Self-Scout",
+            "Category": "Self--Scout",
             "Signal": "1st Downs Ending in ≤2 Yd Gain",
             "Stat": f"{created_2nd_long}%",
-            "Coaching Note": "They frequently strand themselves — win 1st down and the drive often stalls on its own" if created_2nd_long >= 35 else "Efficient on 1st down — don't give them easy early-down gains",
+            "Coaching Note": "They frequently strand themselves — win 1st down and the drive often stalls on its own" if created_2nd_long >= 35 else "Efficient on 1st down — don't give them easy early--down gains",
         })
 
     # 8. Interception rate
@@ -728,7 +728,7 @@ def build_intel(p_data, df, cols):
             "Category": "Turnover",
             "Signal": "Interception Rate (per pass attempt)",
             "Stat": f"{int_per_pass}%",
-            "Coaching Note": "Turnover-prone passer — force obvious passing situations and play the sticks" if int_per_pass >= 5 else "Ball-secure passer — don't gamble on picks, play assignment defense",
+            "Coaching Note": "Turnover--prone passer — force obvious passing situations and play the sticks" if int_per_pass >= 5 else "Ball--secure passer — don't gamble on picks, play assignment defense",
         })
 
     return pd.DataFrame(intel) if intel else pd.DataFrame()
@@ -755,9 +755,9 @@ def generate_scout_report(p_data, drive_dla, pers_dla,
     dls_g    = dls_grade(avg_dls)
 
     if run_pct >= 60:
-        identity = f"a **run-heavy offense** ({run_pct}% run rate)"
+        identity = f"a **run--heavy offense** ({run_pct}% run rate)"
     elif pass_pct >= 60:
-        identity = f"a **pass-heavy offense** ({pass_pct}% pass rate)"
+        identity = f"a **pass--heavy offense** ({pass_pct}% pass rate)"
     else:
         identity = f"a **balanced offense** ({run_pct}% run / {pass_pct}% pass)"
 
@@ -765,8 +765,8 @@ def generate_scout_report(p_data, drive_dla, pers_dla,
 This opponent runs {identity} averaging **{avg_gain} yards per play**.
 Their overall **First Down Rate is {fd_rate}%** and **Success Rate is {succ_rt}%**,
 meaning they {'consistently stay ahead of the chains' if succ_rt >= 55 else 'frequently fall behind the chains and rely on conversions'}.
-Explosive plays (15+ yards) account for **{exp_rt}%** of their offense --
-{'a dangerous big-play threat that can score from anywhere on the field.' if exp_rt >= 15 else "not a significant big-play threat, so bend-don't-break schemes can be effective."}
+Explosive plays (15+ yards) account for **{exp_rt}%** of their offense ----
+{'a dangerous big--play threat that can score from anywhere on the field.' if exp_rt >= 15 else "not a significant big--play threat, so bend--don't--break schemes can be effective."}
 """))
 
     if not drive_dla.empty:
@@ -776,11 +776,11 @@ Explosive plays (15+ yards) account for **{exp_rt}%** of their offense --
         pct_d_f = round((drive_dla['DLS_Grade'].isin(['D','F'])).mean() * 100)
         lines.append(("📐 Drive Control (DLS)", f"""
 Their average **Drive Leverage Score is {avg_dls} (Grade: {dls_g})**.
-**{pct_a_b}% of drives** graded A or B -- they maintained favorable situations.
-**{pct_d_f}% of drives** graded D or F -- constant stress, behind the chains.
-Best single-drive DLS: **{best_drive}** | Worst: **{worst_drive}**.
+**{pct_a_b}% of drives** graded A or B ---- they maintained favorable situations.
+**{pct_d_f}% of drives** graded D or F ---- constant stress, behind the chains.
+Best single--drive DLS: **{best_drive}** | Worst: **{worst_drive}**.
 
-{'⚠️ **Exploit:** Force early negative plays. This offense struggles when taken out of rhythm — their low-leverage drives collapse quickly.' if avg_dls < 0.8 else '⚠️ **Caution:** This offense controls drives well. Stopping them requires consistent TFLs on first down.'}
+{'⚠️ **Exploit:** Force early negative plays. This offense struggles when taken out of rhythm — their low--leverage drives collapse quickly.' if avg_dls < 0.8 else '⚠️ **Caution:** This offense controls drives well. Stopping them requires consistent TFLs on first down.'}
 """))
 
     if not pers_dla.empty:
@@ -802,7 +802,7 @@ Primary group: **{primary}** ({primary_pct}% of plays, {primary_run}% run / {pri
 
 {worst_note}
 
-**Exploit:** When their low-DLS personnel aligns, they are already in a self-created stress situation — apply pressure, don't give up the conversion.
+**Exploit:** When their low--DLS personnel aligns, they are already in a self--created stress situation — apply pressure, don't give up the conversion.
 """))
 
     if not sss_summary.empty:
@@ -821,12 +821,12 @@ averaging only **{cause_gain} yards** on the prior snap.
 
 {form_note}
 
-⚠️ **Exploit:** Stop their {cause_type.lower()} game on early downs. Hold them below {cause_gain + 1} yards on 1st and 2nd down consistently and you force exactly the stress situations they struggle in. This is the highest-leverage defensive adjustment available.
+⚠️ **Exploit:** Stop their {cause_type.lower()} game on early downs. Hold them below {cause_gain + 1} yards on 1st and 2nd down consistently and you force exactly the stress situations they struggle in. This is the highest--leverage defensive adjustment available.
 """))
 
     if not fpar_df.empty:
         fpar_reset  = fpar_df.reset_index()
-        bu_1st      = fpar_reset[(fpar_reset['Field_Zone'] == 'Backed Up (own 30-)') & (fpar_reset[cols['dn']] == 1)]
+        bu_1st      = fpar_reset[(fpar_reset['Field_Zone'] == 'Backed Up (own 30--)') & (fpar_reset[cols['dn']] == 1)]
         sc_1st      = fpar_reset[(fpar_reset['Field_Zone'] == 'Scoring Zone (opp 20+)') & (fpar_reset[cols['dn']] == 1)]
         backed_note = ""
         if not bu_1st.empty:
@@ -843,20 +843,20 @@ averaging only **{cause_gain} yards** on the prior snap.
 
 {scoring_note}
 
-⚠️ **Exploit:** Zone-by-zone tendencies let you call the right front BEFORE the snap.
+⚠️ **Exploit:** Zone--by--zone tendencies let you call the right front BEFORE the snap.
 """))
 
     if not chain.empty:
-        top_plays_text = "\n".join([f"- **{play}** — {row['Plays']} plays, {row['FD Rate %']}% FD, {row['Success Rate %']}% success" for play, row in chain.head(5).iterrows()])
-        bot_plays_text = "\n".join([f"- **{play}** — {row['Plays']} plays, {row['FD Rate %']}% FD" for play, row in chain.sort_values('FD Rate %').head(3).iterrows()])
-        lines.append(("📈 Chain-Moving Plays to Stop", f"""
-**Most dangerous chain-movers:**
+        top_plays_text = "\n".join([f"-- **{play}** — {row['Plays']} plays, {row['FD Rate %']}% FD, {row['Success Rate %']}% success" for play, row in chain.head(5).iterrows()])
+        bot_plays_text = "\n".join([f"-- **{play}** — {row['Plays']} plays, {row['FD Rate %']}% FD" for play, row in chain.sort_values('FD Rate %').head(3).iterrows()])
+        lines.append(("📈 Chain--Moving Plays to Stop", f"""
+**Most dangerous chain--movers:**
 {top_plays_text}
 
 **Frequent calls with low conversion (let them run these):**
 {bot_plays_text}
 
-⚠️ **Exploit:** When you take away their top chain-movers they fall back on low-conversion habits. Take away the top plays, invite the bad ones, capitalize on the punt.
+⚠️ **Exploit:** When you take away their top chain--movers they fall back on low--conversion habits. Take away the top plays, invite the bad ones, capitalize on the punt.
 """))
 
     verdict_score = 0
@@ -876,10 +876,10 @@ averaging only **{cause_gain} yards** on the prior snap.
     strengths = []
     if avg_gain >= 6.5:   strengths.append(f"elite yards per play ({avg_gain})")
     elif avg_gain >= 5.0: strengths.append(f"strong yards per play ({avg_gain})")
-    if exp_rt >= 15:      strengths.append(f"dangerous big-play rate ({exp_rt}%)")
+    if exp_rt >= 15:      strengths.append(f"dangerous big--play rate ({exp_rt}%)")
     elif exp_rt >= 10:    strengths.append(f"moderate explosive threat ({exp_rt}%)")
     if succ_rt >= 52:     strengths.append(f"elite success rate ({succ_rt}%)")
-    elif succ_rt >= 45:   strengths.append(f"above-average success rate ({succ_rt}%)")
+    elif succ_rt >= 45:   strengths.append(f"above--average success rate ({succ_rt}%)")
     if fd_rate >= 50:     strengths.append(f"high first down rate ({fd_rate}%)")
     elif fd_rate >= 38:   strengths.append(f"solid first down rate ({fd_rate}%)")
     if not drive_dla.empty:
@@ -890,11 +890,11 @@ averaging only **{cause_gain} yards** on the prior snap.
     strength_text = ", ".join(strengths[:3]) if strengths else "balanced production"
 
     if verdict_score >= 7:
-        verdict = f"🔴 **High-Threat Offense.** Powered by {strength_text}. No single silver bullet — must stop them consistently on every snap."
+        verdict = f"🔴 **High--Threat Offense.** Powered by {strength_text}. No single silver bullet — must stop them consistently on every snap."
     elif verdict_score >= 4:
-        verdict = f"🟡 **Moderate-Threat Offense.** Key weapons: {strength_text}. Attack their stress patterns on early downs and force them behind the chains."
+        verdict = f"🟡 **Moderate--Threat Offense.** Key weapons: {strength_text}. Attack their stress patterns on early downs and force them behind the chains."
     else:
-        verdict = f"🟢 **Manageable Offense.** Limited by {strength_text if strengths else 'inconsistent execution'}. Force early-down stops and let their tendencies beat them."
+        verdict = f"🟢 **Manageable Offense.** Limited by {strength_text if strengths else 'inconsistent execution'}. Force early--down stops and let their tendencies beat them."
     lines.append(("🎯 Overall Scouting Verdict", verdict))
     return lines
 
@@ -915,12 +915,12 @@ with st.sidebar:
             break
     if not found_logo:
         st.subheader("🏈 CARLSBAD FOOTBALL")
-    st.write("---")
+    st.write("------")
     st.caption("FormationIQ v9.0 — Final Build")
 
 st.title("🏈 FormationIQ — Offensive Scouting Analytics")
 st.markdown("""
-> Upload a Hudl play-by-play export and instantly break down your opponent's offensive tendencies — by formation, personnel, down, distance, and more.
+> Upload a Hudl play--by--play export and instantly break down your opponent's offensive tendencies — by formation, personnel, down, distance, and more.
 """)
 
 col1, col2, col3 = st.columns(3)
@@ -928,27 +928,27 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown("### 📤 Getting Started")
     st.markdown("""
-- Export your opponent's playlist from **Hudl** as CSV or Excel
-- Upload the file using the uploader below
-- All tabs populate automatically — no setup needed
+-- Export your opponent's playlist from **Hudl** as CSV or Excel
+-- Upload the file using the uploader below
+-- All tabs populate automatically — no setup needed
 """)
 
 with col2:
     st.markdown("### 📊 What's Inside")
     st.markdown("""
-- **Formation & Personnel** breakdowns
-- **Run/Pass tendencies** by down & distance
-- **Field zone** and hash analysis
-- **Play success** and explosive play rates
-- **Custom Pivot Lab** — build your own views
+-- **Formation & Personnel** breakdowns
+-- **Run/Pass tendencies** by down & distance
+-- **Field zone** and hash analysis
+-- **Play success** and explosive play rates
+-- **Custom Pivot Lab** — build your own views
 """)
 
 with col3:
     st.markdown("### 💡 Tips")
     st.markdown("""
-- Use the **Play Type filter** to isolate run or pass
-- All charts and tables are **exportable to Excel**
-- Try the sample data below if you don't have a file yet
+-- Use the **Play Type filter** to isolate run or pass
+-- All charts and tables are **exportable to Excel**
+-- Try the sample data below if you don't have a file yet
 """)
 
 st.divider()
@@ -965,9 +965,9 @@ with st.expander("📂 No file? Download sample data"):
 7,O,3,5,20,R,DUBS,BAL,QUICK PASS,PASS,0,Incomplete,,N,,,L
 8,O,3,5,20,R,20 Wing,L,COUNTER H,RUN,8,Rush,,Y,,,R
 9,O,1,10,8,L,20 Wing,R,DIVE,RUN,8,Rush TD,,Y,,,L
-10,O,1,10,-22,R,10 trips,R,BUBBLE,PASS,50,Complete TD,,Y,,,R
-11,O,2,7,-36,R,11 spread wing,R,LONG TRAP,RUN,1,Rush,,N,,,L
-12,O,3,6,-37,M,20 Wing,L,DROP BACK PASS,PASS,0,Incomplete,,N,,,R"""
+10,O,1,10,--22,R,10 trips,R,BUBBLE,PASS,50,Complete TD,,Y,,,R
+11,O,2,7,--36,R,11 spread wing,R,LONG TRAP,RUN,1,Rush,,N,,,L
+12,O,3,6,--37,M,20 Wing,L,DROP BACK PASS,PASS,0,Incomplete,,N,,,R"""
     st.download_button(
         label="⬇️ Download Sample CSV",
         data=sample_csv,
@@ -1038,7 +1038,7 @@ if uploaded_file:
             FD_Rate=('Is_FD','mean'), Success_Rate=('Is_Succ','mean'), Explosive_Rt=('Is_Explosive','mean'),
         ).round(2)
         drive_dla['High_Lev%']    = drive_view.groupby('Drive_ID')['Leverage_Score'].apply(lambda x: round((x >= 1.5).mean() * 100))
-        drive_dla['Low_Lev%']     = drive_view.groupby('Drive_ID')['Leverage_Score'].apply(lambda x: round((x <= -1).mean() * 100))
+        drive_dla['Low_Lev%']     = drive_view.groupby('Drive_ID')['Leverage_Score'].apply(lambda x: round((x <= --1).mean() * 100))
         drive_dla['FD_Rate']      = (drive_dla['FD_Rate'] * 100).round(0).astype(int)
         drive_dla['Success_Rate'] = (drive_dla['Success_Rate'] * 100).round(0).astype(int)
         drive_dla['Explosive_Rt'] = (drive_dla['Explosive_Rt'] * 100).round(0).astype(int)
@@ -1050,7 +1050,7 @@ if uploaded_file:
             Success_Rate=('Is_Succ','mean'), Explosive_Rt=('Is_Explosive','mean'),
         ).round(2)
         pers_dla['High_Lev%']    = p_data.groupby('PERSONNEL')['Leverage_Score'].apply(lambda x: round((x >= 1.5).mean() * 100))
-        pers_dla['Low_Lev%']     = p_data.groupby('PERSONNEL')['Leverage_Score'].apply(lambda x: round((x <= -1).mean() * 100))
+        pers_dla['Low_Lev%']     = p_data.groupby('PERSONNEL')['Leverage_Score'].apply(lambda x: round((x <= --1).mean() * 100))
         pers_dla['Run%']         = p_data.groupby('PERSONNEL')[cols['type']].apply(lambda x: round((x == 'RUN').mean() * 100))
         pers_dla['Pass%']        = p_data.groupby('PERSONNEL')[cols['type']].apply(lambda x: round((x == 'PASS').mean() * 100))
         pers_dla['FD_Rate']      = (pers_dla['FD_Rate'] * 100).round(0).astype(int)
@@ -1065,7 +1065,7 @@ if uploaded_file:
             Success_Rate=('Is_Succ','mean'), Explosive_Rt=('Is_Explosive','mean'),
         ).round(2)
         pf_dla['High_Lev%']    = p_data.groupby(['PERSONNEL', cols['form']])['Leverage_Score'].apply(lambda x: round((x >= 1.5).mean() * 100))
-        pf_dla['Low_Lev%']     = p_data.groupby(['PERSONNEL', cols['form']])['Leverage_Score'].apply(lambda x: round((x <= -1).mean() * 100))
+        pf_dla['Low_Lev%']     = p_data.groupby(['PERSONNEL', cols['form']])['Leverage_Score'].apply(lambda x: round((x <= --1).mean() * 100))
         pf_dla['FD_Rate']      = (pf_dla['FD_Rate'] * 100).round(0).astype(int)
         pf_dla['Success_Rate'] = (pf_dla['Success_Rate'] * 100).round(0).astype(int)
         pf_dla['Explosive_Rt'] = (pf_dla['Explosive_Rt'] * 100).round(0).astype(int)
@@ -1094,7 +1094,7 @@ if uploaded_file:
         t3 = p_data[p_data[cols['dn']] == 3].copy()
         if not t3.empty:
             t3['Sit'] = t3[cols['dist']].apply(
-                lambda x: "3rd & Short (1-3)" if x <= 3 else ("3rd & Mid (4-7)" if x <= 7 else "3rd & Long (7+)")
+                lambda x: "3rd & Short (1--3)" if x <= 3 else ("3rd & Mid (4--7)" if x <= 7 else "3rd & Long (7+)")
             )
             t3_summary = t3.groupby('Sit')['Is_FD'].mean().mul(100).round(0).astype(int).to_frame("FD Rate %")
         else:
@@ -1119,9 +1119,9 @@ if uploaded_file:
             "Personnel Identity":         pers_counts,
             "3rd Down Summary":           t3_summary,
             "Chain Moving":               chain,
-            "Drive Leverage-Per Drive":   drive_dla,
-            "Drive Leverage-Personnel":   pers_dla,
-            "Drive Leverage-Pers+Form":   pf_dla,
+            "Drive Leverage--Per Drive":   drive_dla,
+            "Drive Leverage--Personnel":   pers_dla,
+            "Drive Leverage--Pers+Form":   pf_dla,
             "Sequence Stress Score":      sss_summary,
             "Stress by Formation":        sss_by_form,
             "Field Position Aggression":  fpar_df.reset_index(),
@@ -1137,7 +1137,7 @@ if uploaded_file:
             st.metric("Avg Gain",     f"{p_data[cols['gain']].mean():.1f} yds")
             st.metric("FD Rate",      f"{round(p_data['Is_FD'].mean()*100)}%")
             st.metric("Success Rate", f"{round(p_data['Is_Succ'].mean()*100)}%")
-            st.write("---")
+            st.write("------")
             st.subheader("⬇️ Download Full Report")
             excel_data = build_excel_export(
                 export_options, p_data, drive_dla, pers_dla,
@@ -1149,7 +1149,7 @@ if uploaded_file:
                 label="📥 Download FormationIQ Report",
                 data=excel_data,
                 file_name="FormationIQ_Report.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                mime="application/vnd.openxmlformats--officedocument.spreadsheetml.sheet"
             )
 
 
@@ -1170,9 +1170,9 @@ if uploaded_file:
 How often this offense picks up the first down marker — gain equals or exceeds the distance needed.
 
 **Examples:**
-- 2nd & 7 → gain of 8 yards ✅ First down counted
-- 2nd & 7 → gain of 6 yards ❌ Not counted
-- 3rd & 4 → gain of 4 yards ✅ First down counted
+-- 2nd & 7 → gain of 8 yards ✅ First down counted
+-- 2nd & 7 → gain of 6 yards ❌ Not counted
+-- 3rd & 4 → gain of 4 yards ✅ First down counted
 
 > Below **35%** = chains rarely moving. Above **50%** = very difficult to get off the field.
 """)
@@ -1184,7 +1184,7 @@ A more precise measure than FD Rate. A play is "successful" if it gained
 enough for the situation — not just whether it converted.
 
 | Down | Threshold | Example |
-|---|---|---|
+|------|------|------|
 | 1st | ≥ 45% of distance | 1st & 10 → need 4.5 yds → 5 yd gain ✅ |
 | 1st | ≥ 45% of distance | 1st & 10 → need 4.5 yds → 3 yd gain ❌ |
 | 2nd | ≥ 65% of distance | 2nd & 8 → need 5.2 yds → 6 yd gain ✅ |
@@ -1197,7 +1197,7 @@ first downs but were constantly behind the chains before doing so.
 Success Rate exposes that they're surviving on 3rd down luck rather than
 building drives consistently.
 
-> Above **50%** = disciplined chain-moving offense. Below **40%** = living and dying by big plays.
+> Above **50%** = disciplined chain--moving offense. Below **40%** = living and dying by big plays.
 """)
             st.divider()
 
@@ -1206,18 +1206,18 @@ building drives consistently.
 Measures how much control the offense had at every snap.
 
 | Situation | Score |
-|---|---|
-| 1st & ≤5, 2nd & ≤3, 3rd/4th & 1-2 | +2 (High) |
-| Normal 1st & 10, 2nd & 4-7 | +1 (Med) |
-| 1st/2nd behind chains | -1 (Low) |
-| 3rd/4th & 7+ | -2 (Stress) |
+|------|------|
+| 1st & ≤5, 2nd & ≤3, 3rd/4th & 1--2 | +2 (High) |
+| Normal 1st & 10, 2nd & 4--7 | +1 (Med) |
+| 1st/2nd behind chains | --1 (Low) |
+| 3rd/4th & 7+ | --2 (Stress) |
 
-**Field position modifier:** Red zone +0.5 | Backed up own 30 -0.5
+**Field position modifier:** Red zone +0.5 | Backed up own 30 --0.5
 
-**Grade:** A ≥ 1.5 | B ≥ 0.8 | C ≥ 0.2 | D ≥ -0.5 | F < -0.5
+**Grade:** A ≥ 1.5 | B ≥ 0.8 | C ≥ 0.2 | D ≥ --0.5 | F < --0.5
 
 **Example:** A drive with plays on 1st & 10 (+1), 2nd & 3 (+2), 3rd & 1 (+2) = avg DLS of 1.67 → Grade A.
-A drive with 1st & 10 (+1), incomplete pass → 2nd & 10 (-1), 3rd & 10 (-2) = avg DLS of -0.67 → Grade F.
+A drive with 1st & 10 (+1), incomplete pass → 2nd & 10 (--1), 3rd & 10 (--2) = avg DLS of --0.67 → Grade F.
 """)
             st.divider()
 
@@ -1227,8 +1227,8 @@ Tracks how often the offense enters **3rd & 5+** situations and identifies
 which prior play type or formation caused the stress.
 
 **Example:**
-- 1st & 10 → incomplete pass (0 yds) → 2nd & 10 → run for 2 yds → **3rd & 8** ← stress situation
-- SSS tags the 2nd down run as the cause of the 3rd & 8
+-- 1st & 10 → incomplete pass (0 yds) → 2nd & 10 → run for 2 yds → **3rd & 8** ← stress situation
+-- SSS tags the 2nd down run as the cause of the 3rd & 8
 > Use this to find the **root cause** of drive breakdowns — not just the symptom.
 """)
             st.divider()
@@ -1238,7 +1238,7 @@ which prior play type or formation caused the stress.
 Pass rate, success rate, and avg gain by field zone and down.
 
 | Zone | Description |
-|---|---|
+|------|------|
 | Backed Up | Own 30 or deeper |
 | Own Territory | Own 30 to midfield |
 | Opp Territory | Midfield to opp 30 |
@@ -1250,15 +1250,15 @@ that is aggressive but ineffective — a defensive opportunity.
             st.divider()
 
             st.subheader("💥 Explosive Play")
-            st.markdown("Any play gaining **15 or more yards.** If an offense gains 500 yards but 200 come from 3 explosive plays, they are big-play dependent — stop those and the offense stalls.")
+            st.markdown("Any play gaining **15 or more yards.** If an offense gains 500 yards but 200 come from 3 explosive plays, they are big--play dependent — stop those and the offense stalls.")
             st.divider()
 
             st.subheader("🏃 Personnel Group")
             st.markdown("""
-Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
+Two--digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
 
 | Code | RBs | TEs | WRs | Common Name |
-|---|---|---|---|---|
+|------|------|------|------|------|
 | 00 | 0 | 0 | 5 | Empty |
 | 10 | 1 | 0 | 4 | Trips/Quads |
 | 11 | 1 | 1 | 3 | Standard Spread |
@@ -1266,7 +1266,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
 | 13 | 1 | 3 | 1 | Double Y |
 | 20 | 2 | 0 | 3 | Wing |
 | 21 | 2 | 1 | 2 | Power Spread |
-| 22 | 2 | 2 | 1 | Heavy/I-Form |
+| 22 | 2 | 2 | 1 | Heavy/I--Form |
 """)
 
         # ── TAB 1: PERSONNEL ────────────────────────────────
@@ -1317,7 +1317,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 with c2:
                     t3_tend = t3.groupby('Sit')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100).round(0).astype(int)
                     st.dataframe(t3_tend.style.background_gradient(cmap='RdYlGn_r').format("{:d}%"), use_container_width=False)
-                for sit in ["3rd & Short (1-3)", "3rd & Mid (4-7)", "3rd & Long (7+)"]:
+                for sit in ["3rd & Short (1--3)", "3rd & Mid (4--7)", "3rd & Long (7+)"]:
                     with st.expander(f"Top Calls: {sit}"):
                         st.table(t3[t3['Sit'] == sit][cols['play']].value_counts().head(3))
             else:
@@ -1342,14 +1342,14 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             gz = p_data[p_data[cols['field']].between(1, 10)].copy()
             c1, c2 = st.columns(2)
             with c1:
-                st.subheader("🔴 Red Zone (11-20)")
+                st.subheader("🔴 Red Zone (11--20)")
                 if not rz.empty:
                     st.metric("TD/FD Rate", f"{round(rz['Is_FD'].mean()*100)}%")
                     st.table(rz[cols['play']].value_counts().head(5).to_frame("Plays"))
                 else:
                     st.info("No red zone plays.")
             with c2:
-                st.subheader("🟢 Green Zone (1-10)")
+                st.subheader("🟢 Green Zone (1--10)")
                 if not gz.empty:
                     st.metric("Success Rate", f"{round(gz['Is_Succ'].mean()*100)}%")
                     st.table(gz[cols['play']].value_counts().head(5).to_frame("Plays"))
@@ -1361,7 +1361,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             st.header("🔮 Winning Probability (AI)")
 
             st.subheader("🤖 AI Scouting Intelligence")
-            st.caption("Auto-detected behavioral patterns and tendencies from play-by-play data.")
+            st.caption("Auto--detected behavioral patterns and tendencies from play--by--play data.")
             if not intel_df.empty:
                 st.dataframe(
                     intel_df.set_index('Category'),
@@ -1417,7 +1417,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             with fc2:
                 down_filter = st.multiselect("Down", [1, 2, 3, 4], default=[1, 2, 3, 4])
             with fc3:
-                dist_filter = st.radio("Distance", ["ALL", "Short (1-3)", "Med (4-7)", "Long (8+)"], horizontal=False)
+                dist_filter = st.radio("Distance", ["ALL", "Short (1--3)", "Med (4--7)", "Long (8+)"], horizontal=False)
             with fc4:
                 zone_filter = st.radio("Field Zone", ["ALL", "Own Territory", "Midfield", "Scoring Zone"], horizontal=False)
 
@@ -1427,16 +1427,16 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 view = view[view[cols['type']] == play_filter]
             if down_filter:
                 view = view[view[cols['dn']].isin(down_filter)]
-            if dist_filter == "Short (1-3)":
+            if dist_filter == "Short (1--3)":
                 view = view[view[cols['dist']] <= 3]
-            elif dist_filter == "Med (4-7)":
+            elif dist_filter == "Med (4--7)":
                 view = view[view[cols['dist']].between(4, 7)]
             elif dist_filter == "Long (8+)":
                 view = view[view[cols['dist']] >= 8]
             if zone_filter == "Own Territory":
-                view = view[view[cols['field']] <= -30]
+                view = view[view[cols['field']] <= --30]
             elif zone_filter == "Midfield":
-                view = view[view[cols['field']].between(-29, 0)]
+                view = view[view[cols['field']].between(--29, 0)]
             elif zone_filter == "Scoring Zone":
                 view = view[view[cols['field']] >= 1]
 
@@ -1477,7 +1477,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
 
                 if break_by == "Distance Bucket":
                     piv_view['Distance Bucket'] = piv_view[cols['dist']].apply(
-                        lambda x: "Short (1-3)" if x <= 3 else ("Med (4-7)" if x <= 7 else "Long (8+)")
+                        lambda x: "Short (1--3)" if x <= 3 else ("Med (4--7)" if x <= 7 else "Long (8+)")
                     )
                     break_col = "Distance Bucket"
                 elif break_by == "None":
@@ -1541,7 +1541,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                     label="⬇️ Export This View to Excel",
                     data=pivot_export.getvalue(),
                     file_name="FormationIQ_PivotView.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    mime="application/vnd.openxmlformats--officedocument.spreadsheetml.sheet"
                 )
             else:
                 st.info("Select valid grouping options above to build your table.")
@@ -1573,7 +1573,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
         # ── TAB 8: DRIVE LEVERAGE ────────────────────────────
         with tabs[8]:
             st.header("📐 Drive Leverage Score (DLS)")
-            st.subheader("Per-Drive Summary")
+            st.subheader("Per--Drive Summary")
             st.dataframe(drive_dla.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
             st.divider()
             st.subheader("Personnel Leverage Profile")
@@ -1590,7 +1590,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
         # ── TAB 9: SCOUT REPORT ──────────────────────────────
         with tabs[9]:
             st.header("🕵️ Opponent Scout Report")
-            st.caption("Auto-generated executive overview based on FormationIQ analysis. Use this as your coaching staff briefing.")
+            st.caption("Auto--generated executive overview based on FormationIQ analysis. Use this as your coaching staff briefing.")
             st.divider()
             for section_title, section_body in scout_sections:
                 st.subheader(section_title)
