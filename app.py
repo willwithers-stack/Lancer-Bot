@@ -1090,6 +1090,7 @@ if uploaded_file:
         chain['Success Rate %'] = p_data.groupby(cols['play'])['Is_Succ'].mean().mul(100).round(0).astype(int)
         chain = chain[chain['Plays'] >= 3].sort_values('FD Rate %', ascending=False).head(15)
 
+
         pers_counts = p_data['PERSONNEL'].value_counts().to_frame("Plays")
         pers_counts['%'] = (pers_counts['Plays'] / pers_counts['Plays'].sum() * 100).round(0).astype(int)
 
