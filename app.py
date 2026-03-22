@@ -1558,7 +1558,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 st.info("Select valid grouping options above to build your table.")
 
 # ── TAB 7: BILL WALSH ASSISTANT ───────────────────────
-         with tabs[7]:
+    with tabs[7]:
              st.header("🧠 Bill Walsh Assistant")
              st.caption("Ask questions about this opponent. Answers are from a coach modeled after Bill Walsh.")
 
