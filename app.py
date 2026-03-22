@@ -1566,7 +1566,7 @@ Two-digit code: RBs + TEs on the field. Remaining skill players = WRs.
 
           # TAB 8: DRIVE LEVERAGE
         with tabs[8]:
-    st.header("🏈 Drive Leverage Score (DLS)")
+        st.header("🏈 Drive Leverage Score (DLS)")
 
     if drive_dla.empty:
         st.warning("No drive data found. Check that your file has an ODK column with 'O' values.")
