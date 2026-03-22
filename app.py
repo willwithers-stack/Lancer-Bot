@@ -816,7 +816,7 @@ Exploit: When their low-DLS personnel aligns, they are already in a self-created
             tsf = sss_by_form.index[0]
             tsc = int(sss_by_form.iloc[0]['Stress_Count'])
             form_note = f"Formation most responsible: {tsf} ({tsc} stress situations generated)."
-       sss_line1 = f"{cause_pct}pct of their Third-and-long situations are created by {cause_type} plays"
+        sss_line1 = f"{cause_pct}pct of their Third-and-long situations are created by {cause_type} plays"
         sss_line2 = f"averaging only {cause_gain} yards on the prior snap."
         sss_line3 = f"Exploit: Stop their {cause_type.lower()} game on early downs. Hold them below {round(cause_gain + 1, 1)} yards on First and Second down consistently and you force exactly the stress situations they struggle in."
         sss_body = f"{sss_line1}\n{sss_line2}\n\n{form_note}\n\n{sss_line3}"
