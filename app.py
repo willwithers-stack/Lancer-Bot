@@ -6,26 +6,25 @@ import numpy as np
 from io import BytesIO
 from openai import OpenAI
 client = OpenAI()
-# ── BILL WALSH LLM ────────────────────────────────────
-WALSH_SYSTEM_PROMPT = """
-You are an offensive head coach modeled after Bill Walsh.
+# ── VIC FANGIO LLM ────────────────────────────────────
+You are a defensive coordinator modeled after Vic Fangio.
 
 Background:
-- Pioneered a precise, timing-based passing system often called the West Coast offense.
-- Values meticulous preparation, scripting openers, and exploiting defensive tendencies.
-- Leads with a demanding 'standard of performance' emphasizing discipline, detail, and professionalism.
+- Legendary NFL defensive coordinator known for disguising coverages and confusing quarterbacks.
+- Built defenses around pattern-matching zone concepts that look like man coverage pre-snap.
+- Emphasizes stopping the run first, controlling the line of scrimmage, and making quarterbacks uncomfortable.
+- Known for meticulous preparation and exploiting offensive tendencies.
 
 Style:
-- Calm, analytical, and teaching-oriented.
-- Use specific football terminology (formations, personnel, coverages, down/distance).
-- Focus on tendencies, matchups, and game-planning, not clichés.
+- Direct, no-nonsense, and detail-oriented.
+- Use specific terminology: cover 2, quarters, pattern-match, two-high shell, box count, leverage.
+- Focus on taking away the opponent's best play and forcing them into uncomfortable situations.
 
 When a coach asks a question:
-1) Briefly state what you see in the opponent tendencies.
-2) Give 3–6 concrete coaching points or game-plan ideas in bullets.
-3) Keep answers concise enough to scan quickly in a meeting.
+1. Identify the offensive tendency most relevant to the question.
+2. Give 3-6 concrete defensive adjustments or game-plan points in bullets.
+3. Keep it concise enough to scan quickly before a game.
 """
-
 def summarize_view(df: pd.DataFrame) -> str:
     if df.empty:
         return "No plays in view."
@@ -44,11 +43,11 @@ def summarize_view(df: pd.DataFrame) -> str:
     ]
     return "\n".join(lines)
 
-def call_walsh_llm(summary_text: str, question: str) -> str:
+def call_fangio_llm(summary_text: str, question: str) -> str:
     resp = client.responses.create(
         model="gpt-4.1-mini",
         input=[
-            {"role": "system", "content": WALSH_SYSTEM_PROMPT},
+            {"role": "system", "content": FANGIO_SYSTEM_PROMPT},
             {"role": "user",
              "content": f"Opponent tendency summary:\n{summary_text}\n\nCoach question:\n{question}"}
         ],
@@ -1159,7 +1158,7 @@ if uploaded_file:
         tabs = st.tabs([
             "Definitions", "Personnel Identity", "3rd Down Efficiency",
             "Chain Moving", "Red/Green Zone", "Winning Probability",
-            "Pivot Lab", "Bill Walsh", "Drive Leverage (DLA)", "Scout Report"
+            "Pivot Lab", "Vic Fangio", "Drive Leverage (DLA)", "Scout Report"
         ])
         # ── TAB 0: DEFINITIONS ───────────────────────────────
         with tabs[0]:
@@ -1547,27 +1546,27 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             else:
                 st.info("Select valid grouping options above to build your table.")
 
-# ── TAB 7: BILL WALSH ASSISTANT ───────────────────────
+# ── TAB 7: Vic Fangio ASSISTANT ───────────────────────
     with tabs[7]:
-             st.header("🧠 Bill Walsh Assistant")
-             st.caption("Ask questions about this opponent. Answers are from a coach modeled after Bill Walsh.")
-    if "walsh_chat" not in st.session_state:
-        st.session_state.walsh_chat = []
+             st.header("🧠 Vic Fangio Assistant")
+             st.caption("Ask questions about this opponent. Answers are from a coach modeled after Vic Fangio.")
+    if "fangio_chat" not in st.session_state:
+        st.session_state.fangio_chat = []
 
     current_view = view if "view" in locals() else p_data
 
-    for msg in st.session_state.walsh_chat:
+    for msg in st.session_state.fangio_chat:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
     question = st.chat_input("Ask about tendencies, game plan, or how to attack this defense...")
 
     if question:
-        st.session_state.walsh_chat.append({"role": "user", "content": question})
-        with st.spinner("Coach Walsh is reviewing the film..."):
+        st.session_state.fangio_chat.append({"role": "user", "content": question})
+        with st.spinner("Coach Fangio is reviewing the film..."):
             summary_text = summarize_view(current_view)
-            answer = call_walsh_llm(summary_text, question)
-        st.session_state.walsh_chat.append({"role": "assistant", "content": answer})
+            answer = call_fangio_llm(summary_text, question)
+        st.session_state.fangio_chat.append({"role": "assistant", "content": answer})
         with st.chat_message("assistant"):
             st.markdown(answer)
 
