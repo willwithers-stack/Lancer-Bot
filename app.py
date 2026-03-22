@@ -815,15 +815,11 @@ Primary group: **{primary}** ({primary_pct}% of plays, {primary_run}% run / {pri
             tsf = sss_by_form.index[0]
             tsc = int(sss_by_form.iloc[0]['Stress_Count'])
             form_note = f"Formation most responsible: **{tsf}** ({tsc} stress situations generated)."
-        lines.append(("Stress Pattern Analysis (SSS)", f"""
-**{cause_pct} of their 3rd-and-long situations are created by {cause_type} plays**,
-averaging only **{cause_gain} yards** on the prior snap.
-
-{form_note}
-
-**Exploit:** Stop their {cause_type.lower()} game on early downs. Hold them below {cause_gain + 1} yards on 1st and 2nd down consistently and you force exactly the stress situations they struggle in. This is the highest--leverage defensive adjustment available.
-"""))
-
+       sss_line1 = f"{cause_pct}pct of their 3rd-and-long situations are created by {cause_type} plays"
+        sss_line2 = f"averaging only {cause_gain} yards on the prior snap."
+        sss_line3 = f"Exploit: Stop their {cause_type.lower()} game on early downs. Hold them below {round(cause_gain + 1, 1)} yards on 1st and 2nd down consistently and you force exactly the stress situations they struggle in."
+        sss_body = f"{sss_line1}\n{sss_line2}\n\n{form_note}\n\n{sss_line3}"
+        lines.append(("Stress Pattern Analysis (SSS)", sss_body))
     if not fpar_df.empty:
         fpar_reset  = fpar_df.reset_index()
         bu_1st      = fpar_reset[(fpar_reset['Field_Zone'] == 'Backed Up (own 30--)') & (fpar_reset[cols['dn']] == 1)]
