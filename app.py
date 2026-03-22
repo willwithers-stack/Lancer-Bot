@@ -1000,7 +1000,7 @@ if uploaded_file:
         'motion': 'MOTION DIR',
         'result': 'RESULT',
     }
-    st.write(df.columns.tolist())  # ← add this temporarily
+    
     if all(cols[k] in df.columns for k in ['type', 'form', 'gain']):
 
         df[cols['type']]  = df[cols['type']].astype(str).str.upper().str.strip()
