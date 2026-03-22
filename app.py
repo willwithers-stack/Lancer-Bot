@@ -1084,6 +1084,7 @@ if uploaded_file:
             sss_by_form.index = sss_by_form.index.astype(str)
         fpar_df = build_fpar(p_data, cols)
         intel_df = build_intel(p_data, df, cols)
+        chain = p_data.groupby(cols['play'])['Is_FD'].agg(['sum','count'])
         chain.columns = ['First Downs','Plays']
         chain['FD Rate %']      = (chain['First Downs'] / chain['Plays'] * 100).round(0).astype(int)
         chain['Success Rate %'] = p_data.groupby(cols['play'])['Is_Succ'].mean().mul(100).round(0).astype(int)
