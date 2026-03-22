@@ -1564,8 +1564,6 @@ Two-digit code: RBs + TEs on the field. Remaining skill players = WRs.
         with st.chat_message("assistant"):
             st.markdown(answer)
 
-        #  TAB 8: DRIVE LEVERAGE 
-        with tabs[8]:
           # TAB 8: DRIVE LEVERAGE
         with tabs[8]:
     st.header("🏈 Drive Leverage Score (DLS)")
