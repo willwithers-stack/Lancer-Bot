@@ -945,7 +945,7 @@ with col3:
     st.markdown("""
 -- Use the **Play Type filter** to isolate run or pass
 -- All charts and tables are **exportable to Excel**
--- Try the sample data below if you don't have a file yet
+-- Try the sample data below if you dont have a file yet
 """)
 
 st.divider()
