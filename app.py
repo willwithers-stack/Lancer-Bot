@@ -1020,12 +1020,10 @@ if uploaded_file:
         p_data['Leverage_Band']  = leva.apply(lambda x: x[0])
         p_data['Leverage_Score'] = leva.apply(lambda x: x[1])
 
-        if 'Drive_ID' not in p_data.columns:
+        if 'Drive_ID' in df.columns and 'Drive_ID' not in p_data.columns:
             p_data = p_data.merge(df[['PLAY #', 'Drive_ID']], on='PLAY #', how='left')
-        
-        drive_view = p_data.copy()
-        drive_view['Drive_ID'] = drive_view['Drive_ID'].ffill()  # fill any gaps
-        drive_view = drive_view.dropna(subset=['Drive_ID'])
+
+        drive_view = p_data.dropna(subset=['Drive_ID']).copy()
 
         drive_dla = drive_view.groupby('Drive_ID').agg(
             Plays=('Leverage_Score','count'), DLS=('Leverage_Score','mean'),
@@ -1541,9 +1539,9 @@ Two-digit code: RBs + TEs on the field. Remaining skill players = WRs.
                 st.info("Select valid grouping options above to build your table.")
 
 #  TAB 7: Vic Fangio ASSISTANT 
-    st.header("🏈 Vic Fangio Assistant")
-    st.caption("Ask questions about this opponent. Answers are from a coach modeled after Vic Fangio.")
-
+    with tabs[7]:
+             st.header(" Vic Fangio Assistant")
+             st.caption("Ask questions about this opponent. Answers are from a coach modeled after Vic Fangio.")
     if "fangio_chat" not in st.session_state:
         st.session_state.fangio_chat = []
 
@@ -1564,49 +1562,22 @@ Two-digit code: RBs + TEs on the field. Remaining skill players = WRs.
         with st.chat_message("assistant"):
             st.markdown(answer)
 
-          # TAB 8: DRIVE LEVERAGE
+        #  TAB 8: DRIVE LEVERAGE 
         with tabs[8]:
-        st.header("🏈 Drive Leverage Score (DLS)")
-
-    if drive_dla.empty:
-        st.warning("No drive data found. Check that your file has an ODK column with 'O' values.")
-    else:
-        st.subheader("Per-Drive Summary")
-        drive_display = drive_dla.reset_index()
-        drive_display['Drive_ID'] = drive_display['Drive_ID'].astype(str)
-        numeric_cols = ['DLS', 'FD_Rate', 'Success_Rate', 'Explosive_Rt', 'High_Lev%', 'Low_Lev%']
-        for c in numeric_cols:
-            if c in drive_display.columns:
-                drive_display[c] = pd.to_numeric(drive_display[c], errors='coerce')
-        st.dataframe(
-            drive_display.style.background_gradient(cmap='RdYlGn', subset=[c for c in numeric_cols if c in drive_display.columns]),
-            use_container_width=True
-        )
-
-        st.divider()
-        st.subheader("Personnel Leverage Profile")
-        pers_display = pers_dla.sort_values('DLS', ascending=False).reset_index()
-        pers_num_cols = ['DLS', 'Avg_Gain', 'FD_Rate', 'Success_Rate', 'Explosive_Rt', 'Run%', 'Pass%']
-        for c in pers_num_cols:
-            if c in pers_display.columns:
-                pers_display[c] = pd.to_numeric(pers_display[c], errors='coerce')
-        st.dataframe(
-            pers_display.style.background_gradient(cmap='RdYlGn', subset=[c for c in pers_num_cols if c in pers_display.columns]),
-            use_container_width=True
-        )
-
-        st.divider()
-        with st.expander("📊 Personnel + Formation Leverage (min 5 plays)"):
-            pf_display = pf_dla.sort_values('DLS', ascending=False).reset_index()
-            pf_num_cols = ['DLS', 'Avg_Gain', 'FD_Rate', 'Success_Rate', 'Explosive_Rt', 'High_Lev%', 'Low_Lev%']
-            for c in pf_num_cols:
-                if c in pf_display.columns:
-                    pf_display[c] = pd.to_numeric(pf_display[c], errors='coerce')
-            st.dataframe(
-                pf_display.style.background_gradient(cmap='RdYlGn', subset=[c for c in pf_num_cols if c in pf_display.columns]),
-                use_container_width=True
-            )
-
+            st.header(" Drive Leverage Score (DLS)")
+            st.subheader("Per-Drive Summary")
+            st.dataframe(drive_dla.reset_index().astype({c: str for c in drive_dla.reset_index().select_dtypes('object').columns}), use_container_width=False)
+            st.divider()
+            st.subheader("Personnel Leverage Profile")
+            st.dataframe(pers_dla.sort_values('DLS', ascending=False).reset_index().astype({c: str for c in pers_dla.sort_values('DLS', ascending=False).reset_index().select_dtypes('object').columns}), use_container_width=False)
+            st.divider()
+            with st.expander(" Personnel + Formation Leverage (min 5 plays)"):
+                pf_display = pf_dla.sort_values('DLS', ascending=False).reset_index()
+                pf_display = pf_display.astype({c: str for c in pf_display.select_dtypes('object').columns})
+                for col in ['DLS','Avg_Gain','FD_Rate','Success_Rate','Explosive_Rt','High_Lev%','Low_Lev%']:
+                    if col in pf_display.columns:
+                        pf_display[col] = pd.to_numeric(pf_display[col], errors='coerce')
+                st.dataframe(pf_display.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
 
         #  TAB 9: SCOUT REPORT 
         with tabs[9]:
@@ -1620,4 +1591,3 @@ Two-digit code: RBs + TEs on the field. Remaining skill players = WRs.
 
     else:
         st.info("Upload a Hudl CSV or Excel file to get started.")
-
