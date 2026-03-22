@@ -1164,7 +1164,7 @@ if uploaded_file:
 
             st.subheader("📌 First Down Rate (FD Rate)")
             st.markdown("""
-How often this offense picks up the first down marker — gain equals or exceeds the distance needed.
+How often this offense picks up the first down marker gain equals or exceeds the distance needed.
 
 **Examples:**
 -- 2nd & 7 → gain of 8 yards ✅ First down counted
