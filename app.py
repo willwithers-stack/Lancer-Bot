@@ -937,7 +937,7 @@ with col2:
 -- **Run/Pass tendencies** by down & distance
 -- **Field zone** and hash analysis
 -- **Play success** and explosive play rates
--- **Custom Pivot Lab** — build your own views
+-- **Custom Pivot Lab** build your own views
 """)
 
 with col3:
