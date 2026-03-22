@@ -1083,8 +1083,6 @@ if uploaded_file:
         if not sss_by_form.empty:
             sss_by_form.index = sss_by_form.index.astype(str)
 
-fpar_df = build_fpar(p_data, cols)
-intel_df = build_intel(p_data, df, cols)
         fpar_df = build_fpar(p_data, cols)
         intel_df = build_intel(p_data, df, cols)
 
