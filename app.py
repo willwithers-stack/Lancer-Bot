@@ -839,7 +839,7 @@ Primary group: **{primary}** ({primary_pct}% of plays, {primary_run}% run / {pri
 
 {scoring_note}
 
-⚠️ **Exploit:** Zone--by--zone tendencies let you call the right front BEFORE the snap.
+**Exploit:** Zone--by--zone tendencies let you call the right front BEFORE the snap.
 """))
 
     if not chain.empty:
@@ -852,7 +852,7 @@ Primary group: **{primary}** ({primary_pct}% of plays, {primary_run}% run / {pri
 **Frequent calls with low conversion (let them run these):**
 {bot_plays_text}
 
-⚠️ **Exploit:** When you take away their top chain--movers they fall back on low--conversion habits. Take away the top plays, invite the bad ones, capitalize on the punt.
+**Exploit:** When you take away their top chain--movers they fall back on low--conversion habits. Take away the top plays, invite the bad ones, capitalize on the punt.
 """))
 
     verdict_score = 0
