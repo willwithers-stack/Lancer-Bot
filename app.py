@@ -999,9 +999,7 @@ if uploaded_file:
         'motion': 'MOTION DIR',
         'result': 'RESULT',
     }
-    missing = [cols[k] for k in ['type', 'form', 'gain'] if cols[k] not in df.columns]
-    st.write("Missing:", missing)
-    st.write("df.columns:", df.columns.tolist())
+    
     if all(cols[k] in df.columns for k in ['type', 'form', 'gain']):
 
         df[cols['type']]  = df[cols['type']].astype(str).str.upper().str.strip()
