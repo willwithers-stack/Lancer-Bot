@@ -765,7 +765,7 @@ def generate_scout_report(p_data, drive_dla, pers_dla,
 This opponent runs {identity} averaging **{avg_gain} yards per play**.
 Their overall **First Down Rate is {fd_rate}%** and **Success Rate is {succ_rt}%**,
 meaning they {'consistently stay ahead of the chains' if succ_rt >= 55 else 'frequently fall behind the chains and rely on conversions'}.
-Explosive plays (15+ yards) account for **{exp_rt}%** of their offense —
+Explosive plays (15+ yards) account for **{exp_rt}%** of their offense --
 {'a dangerous big-play threat that can score from anywhere on the field.' if exp_rt >= 15 else "not a significant big-play threat, so bend-don't-break schemes can be effective."}
 """))
 
