@@ -802,7 +802,7 @@ Primary group: **{primary}** ({primary_pct}% of plays, {primary_run}% run / {pri
 
 {worst_note}
 
-⚠️ **Exploit:** When their low-DLS personnel aligns, they are already in a self-created stress situation — apply pressure, don't give up the conversion.
+**Exploit:** When their low-DLS personnel aligns, they are already in a self-created stress situation — apply pressure, don't give up the conversion.
 """))
 
     if not sss_summary.empty:
