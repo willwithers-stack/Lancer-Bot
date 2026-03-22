@@ -1150,7 +1150,7 @@ if uploaded_file:
         tabs = st.tabs([
             "Definitions", "Personnel Identity", "Third Down Efficiency",
             "Chain Moving", "Red/Green Zone", "Winning Probability",
-            "Pivot Lab", "Vic Fangio", "Drive Leverage (DLA)", "Scout Report"
+            "Pivot Lab", "Vic Fangio", "Drive Leverage (DLA)"
         ])
         #  TAB 0: DEFINITIONS 
         with tabs[0]:
@@ -1579,15 +1579,6 @@ Two-digit code: RBs + TEs on the field. Remaining skill players = WRs.
                         pf_display[col] = pd.to_numeric(pf_display[col], errors='coerce')
                 st.dataframe(pf_display.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
 
-        #  TAB 9: SCOUT REPORT 
-        with tabs[9]:
-            st.header(" Opponent Scout Report")
-            st.caption("Auto-generated executive overview based on FormationIQ analysis. Use this as your coaching staff briefing.")
-            st.divider()
-            for section_title, section_body in scout_sections:
-                st.subheader(section_title)
-                st.markdown(section_body)
-                st.divider()
 
     else:
         st.info("Upload a Hudl CSV or Excel file to get started.")
