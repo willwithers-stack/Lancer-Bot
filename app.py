@@ -1075,7 +1075,7 @@ if uploaded_file:
         pf_dla['Avg_Gain']     = pf_dla['Avg_Gain'].round(1)
         pf_dla['DLS_Grade']    = pf_dla['DLS'].apply(dls_grade)
         pf_dla = pf_dla[pf_dla['Plays'] >= 5]
-sss_df, sss_summary, sss_by_form = build_sss(p_data, cols)
+        sss_df, sss_summary, sss_by_form = build_sss(p_data, cols)
         if 'CausedByForm' in sss_df.columns:
             sss_df['CausedByForm'] = sss_df['CausedByForm'].astype(str)
         if cols['form'] in sss_df.columns:
