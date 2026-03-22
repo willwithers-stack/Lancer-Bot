@@ -1118,7 +1118,7 @@ if uploaded_file:
         if (not drive_dla.empty) and drive_dla['DLS'].mean() >= 0.7: verdict_score += 1
         if round(p_data[cols['gain']].mean(), 1) >= 5.0:   verdict_score += 1
         if round(p_data[cols['gain']].mean(), 1) >= 6.5:   verdict_score += 1
-        export_options = {
+        export_options = ])
             "Personnel Identity":         pers_counts,
             "3rd Down Summary":           t3_summary,
             "Chain Moving":               chain,
