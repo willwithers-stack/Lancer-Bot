@@ -1129,11 +1129,12 @@ if uploaded_file:
             "Stress by Formation":        sss_by_form,
             "Field Position Aggression":  fpar_df.reset_index(),
             "AI Scouting Intelligence":   intel_df,
+        }
         tabs = st.tabs([
             "Definitions", "Personnel Identity", "3rd Down Efficiency",
             "Chain Moving", "Red/Green Zone", "Winning Probability",
             "Pivot Lab", "Bill Walsh", "Drive Leverage (DLA)", "Scout Report"
-            )]
+            ])
 
         # ── SIDEBAR ─────────────────────────────────────────
         with st.sidebar:
