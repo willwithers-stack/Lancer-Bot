@@ -762,27 +762,28 @@ def generate_scout_report(p_data, drive_dla, pers_dla,
     else:
         identity = f"a balanced offense ({run_pct}pct run / {pass_pct}pct pass)"
 
-    lines.append((" Offensive Identity", f"""
-This opponent runs {identity} averaging {avg_gain} yards per play.
-Their overall First Down Rate is {fd_rate}pct and Success Rate is {succ_rt}pct,
-meaning they {'consistently stay ahead of the chains' if succ_rt >= 55 else 'frequently fall behind the chains and rely on conversions'}.
-Explosive plays (15+ yards) account for {exp_rt}pct of their offense -
-{'a dangerous big-play threat that can score from anywhere on the field.' if exp_rt >= 15 else "not a significant big-play threat, so bend-dont-break schemes can be effective."}
-"""))
+    _ident_tail = "a dangerous big-play threat." if exp_rt >= 15 else "not a big-play threat - bend-dont-break works."
+    _ident_chain = "consistently stay ahead of the chains" if succ_rt >= 55 else "frequently fall behind the chains"
+    lines.append((" Offensive Identity",
+        f"This opponent runs {identity} averaging {avg_gain} yards per play. "
+        f"First Down Rate: {fd_rate}pct, Success Rate: {succ_rt}pct. "
+        f"They {_ident_chain}. "
+        f"Explosive plays (15+ yards): {exp_rt}pct of offense. {_ident_tail}"
+    ))
 
     if not drive_dla.empty:
         best_drive  = drive_dla['DLS'].max()
         worst_drive = drive_dla['DLS'].min()
         pct_a_b = round((drive_dla['DLS_Grade'].isin(['A','B'])).mean() * 100)
         pct_d_f = round((drive_dla['DLS_Grade'].isin(['D','F'])).mean() * 100)
-        lines.append((" Drive Control (DLS)", f"""
-Their average Drive Leverage Score is {avg_dls} (Grade: {dls_g}).
-{pct_a_b}pct of drives graded A or B - they maintained favorable situations.
-{pct_d_f}pct of drives graded D or F - constant stress, behind the chains.
-Best single-drive DLS: {best_drive} | Worst: {worst_drive}.
-
-{' Exploit: Force early negative plays. This offense struggles when taken out of rhythm  their low-leverage drives collapse quickly.' if avg_dls < 0.8 else ' Caution: This offense controls drives well. Stopping them requires consistent TFLs on first down.'}
-"""))
+        _dls_note = "Exploit: Force early negative plays - their low-leverage drives collapse quickly." if avg_dls < 0.8 else "Caution: This offense controls drives well - requires consistent TFLs on first down."
+        lines.append((" Drive Control (DLS)",
+            f"Avg Drive Leverage Score: {avg_dls} (Grade: {dls_g}). "
+            f"{pct_a_b}pct of drives graded A or B. "
+            f"{pct_d_f}pct of drives graded D or F. "
+            f"Best DLS: {best_drive} | Worst: {worst_drive}. "
+            f"{_dls_note}"
+        ))
 
     if not pers_dla.empty:
         top_pers       = pers_dla.sort_values('Plays', ascending=False)
@@ -796,15 +797,12 @@ Best single-drive DLS: {best_drive} | Worst: {worst_drive}.
         best_pers_row  = qual.sort_values('DLS', ascending=False).iloc[0] if len(qual) > 0 else None
         worst_note = f"Their {worst_pers_row.name} personnel has the lowest DLS ({worst_pers_row['DLS']})  when they align here, stress situations follow." if worst_pers_row is not None else ""
         best_note  = f"Their {best_pers_row.name} personnel is their most controlled grouping (DLS: {best_pers_row['DLS']})  expect this on critical downs." if best_pers_row is not None else ""
-        lines.append((" Personnel Tendencies", f"""
-Primary group: {primary} ({primary_pct}pct of plays, {primary_run}pct run / {primary_pass}pct pass, DLS: {primary_dls}).
-
-{best_note}
-
-{worst_note}
-
-Exploit: When their low-DLS personnel aligns, they are already in a self-created stress situation - apply pressure, dont give up the conversion.
-"""))
+        lines.append((" Personnel Tendencies",
+            f"Primary group: {primary} ({primary_pct}pct of plays, {primary_run}pct run / {primary_pass}pct pass, DLS: {primary_dls}). "
+            f"{best_note} "
+            f"{worst_note} "
+            "Exploit: When their low-DLS personnel aligns, apply pressure - dont give up the conversion."
+        ))
 
     if not sss_summary.empty:
         top_cause  = sss_summary.sort_values('Stress %', ascending=False).iloc[0]
@@ -816,10 +814,6 @@ Exploit: When their low-DLS personnel aligns, they are already in a self-created
             tsf = sss_by_form.index[0]
             tsc = int(sss_by_form.iloc[0]['Stress_Count'])
             form_note = f"Formation most responsible: {tsf} ({tsc} stress situations generated)."
-        sss_line1 = f"{cause_pct}pct of their Third-and-long situations are created by {cause_type} plays"
-        sss_line2 = f"averaging only {cause_gain} yards on the prior snap."
-        sss_line3 = f"Exploit: Stop their {cause_type.lower()} game on early downs. Hold them below {round(cause_gain + 1, 1)} yards on First and Second down consistently and you force exactly the stress situations they struggle in."
-        sss_body = f"{sss_line1}\n{sss_line2}\n\n{form_note}\n\n{sss_line3}"
         lines.append(("Stress Pattern Analysis (SSS)",
             f"{cause_pct}pct of their Third-and-long situations created by {cause_type} plays. "
             f"Averaging only {cause_gain} yards on the prior snap. "
@@ -828,18 +822,34 @@ Exploit: When their low-DLS personnel aligns, they are already in a self-created
             f"Hold them below {cause_gain + 1} yards on First and Second down."
         ))
 
+    if not fpar_df.empty:
+        fpar_reset  = fpar_df.reset_index()
+        bu_First      = fpar_reset[(fpar_reset['Field_Zone'] == 'Backed Up (own 30-)') & (fpar_reset[cols['dn']] == 1)]
+        sc_First      = fpar_reset[(fpar_reset['Field_Zone'] == 'Scoring Zone (opp 20+)') & (fpar_reset[cols['dn']] == 1)]
+        backed_note = ""
+        if not bu_First.empty:
+            bu_pass = int(bu_First.iloc[0]['Pass_Rate'])
+            bu_succ = int(bu_First.iloc[0]['Success_Rate'])
+            backed_note = f"When backed up on their own 30 or deeper, they pass {bu_pass}pct on First down ({bu_succ}pct success)  {'predictable and stoppable' if bu_pass >= 55 else 'they run it safe  limit your risk in this zone too'}."
+        scoring_note = ""
+        if not sc_First.empty:
+            sc_pass = int(sc_First.iloc[0]['Pass_Rate'])
+            sc_succ = int(sc_First.iloc[0]['Success_Rate'])
+            scoring_note = f"Inside your scoring zone, they pass {sc_pass}pct on First down ({sc_succ}pct success)  {'get physical at the line, disrupt route timing' if sc_pass >= 55 else 'stack the box, they want to run it in from here'}."
+        lines.append((" Field Position Tendencies",
+            f"{backed_note} "
+            f"{scoring_note} "
+            "Exploit: Zone-by-zone tendencies let you call the right front before the snap."
+        ))
+
     if not chain.empty:
         top_plays_text = "\n".join([f"- {play}  {row['Plays']} plays, {row['FD Rate %']}pct FD, {row['Success Rate %']}pct success" for play, row in chain.head(5).iterrows()])
         bot_plays_text = "\n".join([f"- {play}  {row['Plays']} plays, {row['FD Rate %']}pct FD" for play, row in chain.sort_values('FD Rate %').head(3).iterrows()])
-        lines.append((" Chain-Moving Plays to Stop", f"""
-Most dangerous chain-movers:
-{top_plays_text}
-
-Frequent calls with low conversion (let them run these):
-{bot_plays_text}
-
-Exploit: When you take away their top chain-movers they fall back on low-conversion habits. Take away the top plays, invite the bad ones, capitalize on the punt.
-"""))
+        lines.append((" Chain-Moving Plays to Stop",
+            f"Most dangerous chain-movers:\n{top_plays_text}\n\n"
+            f"Frequent calls with low conversion:\n{bot_plays_text}\n\n"
+            "Exploit: Take away their top chain-movers and they fall back on low-conversion habits."
+        ))
 
     verdict_score = 0
 
@@ -901,10 +911,9 @@ with st.sidebar:
     st.caption("FormationIQ v9.0  Final Build")
 
 st.title(" FormationIQ  Offensive Scouting Analytics")
-st.markdown(
-    "> Upload a Hudl play-by-play export and instantly break down your "
-    "opponents offensive tendencies - by formation, personnel, down, distance, and more."
-)
+st.markdown("""
+> Upload a Hudl play-by-play export and instantly break down your opponents offensive tendencies  by formation, personnel, down, distance, and more.
+""")
 
 col1, col2, col3 = st.columns(3)
 
@@ -913,7 +922,7 @@ with col1:
     st.markdown("""
 - Export your opponents playlist from Hudl as CSV or Excel
 - Upload the file using the uploader below
-- All tabs populate automatically no setup needed
+- All tabs populate automatically  no setup needed
 """)
 
 with col2:
@@ -923,7 +932,7 @@ with col2:
 - Run/Pass tendencies by down & distance
 - Field zone and hash analysis
 - Play success and explosive play rates
-- Custom Pivot Lab build your own views
+- Custom Pivot Lab  build your own views
 """)
 
 with col3:
@@ -1150,7 +1159,7 @@ if uploaded_file:
 
             st.subheader(" First Down Rate (FD Rate)")
             st.markdown("""
-How often this offense picks up the first down marker gain equals or exceeds the distance needed.
+How often this offense picks up the first down marker  gain equals or exceeds the distance needed.
 
 Examples:
 Second & 7  gain of 8 yards  First down counted
