@@ -1160,6 +1160,7 @@ if uploaded_file:
             "🟢 Red/Green Zone",
             "🔮 Winning Probability",
             "🧪 Pivot Lab",
+            "🧠 Bill Walsh",
             "📐 Drive Leverage (DLA)",
             "🕵️ Scout Report",
         ])
