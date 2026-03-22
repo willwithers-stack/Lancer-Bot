@@ -1077,7 +1077,7 @@ if uploaded_file:
         pf_dla = pf_dla[pf_dla['Plays'] >= 5]
 
         sss_df, sss_summary, sss_by_form = build_sss(p_data, cols)
-         if 'CausedByForm' in sss_df.columns:
+        if 'CausedByForm' in sss_df.columns:
             sss_df['CausedByForm'] = sss_df['CausedByForm'].astype(str)
         if cols['form'] in sss_df.columns:
             sss_df[cols['form']] = sss_df[cols['form']].astype(str)
