@@ -816,7 +816,7 @@ Primary group: **{primary}** ({primary_pct}% of plays, {primary_run}% run / {pri
             tsc = int(sss_by_form.iloc[0]['Stress_Count'])
             form_note = f"Formation most responsible: **{tsf}** ({tsc} stress situations generated)."
         lines.append(("🔥 Stress Pattern Analysis (SSS)", f"""
-**{cause_pct}% of their 3rd & long situations are created by {cause_type} plays**,
+**{cause_pct}% of their 3rd-and-long situations are created by {cause_type} plays**,
 averaging only **{cause_gain} yards** on the prior snap.
 
 {form_note}
