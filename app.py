@@ -1075,19 +1075,15 @@ if uploaded_file:
         pf_dla['Avg_Gain']     = pf_dla['Avg_Gain'].round(1)
         pf_dla['DLS_Grade']    = pf_dla['DLS'].apply(dls_grade)
         pf_dla = pf_dla[pf_dla['Plays'] >= 5]
-
-        sss_df, sss_summary, sss_by_form = build_sss(p_data, cols)
+sss_df, sss_summary, sss_by_form = build_sss(p_data, cols)
         if 'CausedByForm' in sss_df.columns:
             sss_df['CausedByForm'] = sss_df['CausedByForm'].astype(str)
         if cols['form'] in sss_df.columns:
             sss_df[cols['form']] = sss_df[cols['form']].astype(str)
         if not sss_by_form.empty:
             sss_by_form.index = sss_by_form.index.astype(str)
-
         fpar_df = build_fpar(p_data, cols)
         intel_df = build_intel(p_data, df, cols)
-
-        chain = p_data.groupby(cols['play'])['Is_FD'].agg(['sum','count'])
         chain.columns = ['First Downs','Plays']
         chain['FD Rate %']      = (chain['First Downs'] / chain['Plays'] * 100).round(0).astype(int)
         chain['Success Rate %'] = p_data.groupby(cols['play'])['Is_Succ'].mean().mul(100).round(0).astype(int)
@@ -1562,7 +1558,6 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
     with tabs[7]:
              st.header("🧠 Bill Walsh Assistant")
              st.caption("Ask questions about this opponent. Answers are from a coach modeled after Bill Walsh.")
-
     if "walsh_chat" not in st.session_state:
         st.session_state.walsh_chat = []
 
