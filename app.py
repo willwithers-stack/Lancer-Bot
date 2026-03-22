@@ -1078,10 +1078,10 @@ if uploaded_file:
 
         sss_df, sss_summary, sss_by_form = build_sss(p_data, cols)
         if not sss_df.empty:
-    sss_df['CausedByForm'] = sss_df['CausedByForm'].astype(str)
-    sss_df[cols['form']]   = sss_df[cols['form']].astype(str)
-if not sss_by_form.empty:
-    sss_by_form.index = sss_by_form.index.astype(str)
+            sss_df['CausedByForm'] = sss_df['CausedByForm'].astype(str)
+            sss_df[cols['form']] = sss_df[cols['form']].astype(str)
+        if not sss_by_form.empty:
+            sss_by_form.index = sss_by_form.index.astype(str)
 
 fpar_df = build_fpar(p_data, cols)
 intel_df = build_intel(p_data, df, cols)
