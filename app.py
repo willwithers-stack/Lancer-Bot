@@ -985,8 +985,7 @@ if uploaded_file:
         df = pd.read_csv(uploaded_file)
     else:
         df = pd.read_excel(uploaded_file)
-    df.columns = [str(c).strip().upper() for c in df.columns]
-
+    df.columns = [str(c).strip().upper().replace('\ufeff', '').replace('\xa0', ' ') for c in df.columns]
     cols = {
         'type':   'PLAY TYPE',
         'form':   'OFF FORM',
