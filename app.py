@@ -1541,9 +1541,9 @@ Two-digit code: RBs + TEs on the field. Remaining skill players = WRs.
                 st.info("Select valid grouping options above to build your table.")
 
 #  TAB 7: Vic Fangio ASSISTANT 
-    with tabs[7]:
-             st.header(" Vic Fangio Assistant")
-             st.caption("Ask questions about this opponent. Answers are from a coach modeled after Vic Fangio.")
+    st.header("🏈 Vic Fangio Assistant")
+    st.caption("Ask questions about this opponent. Answers are from a coach modeled after Vic Fangio.")
+
     if "fangio_chat" not in st.session_state:
         st.session_state.fangio_chat = []
 
