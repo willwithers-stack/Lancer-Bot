@@ -1129,6 +1129,10 @@ if uploaded_file:
             "Stress by Formation":        sss_by_form,
             "Field Position Aggression":  fpar_df.reset_index(),
             "AI Scouting Intelligence":   intel_df,
+        tabs = st.tabs([
+            "Definitions", "Personnel Identity", "3rd Down Efficiency",
+            "Chain Moving", "Red/Green Zone", "Winning Probability",
+            "Pivot Lab", "Bill Walsh", "Drive Leverage (DLA)", "Scout Report"
         }
 
         # ── SIDEBAR ─────────────────────────────────────────
@@ -1157,19 +1161,12 @@ if uploaded_file:
 
 
         # ── TABS ────────────────────────────────────────────
-        tabs = st.tabs([
-            "📖 Definitions",
-            "📊 Personnel Identity",
-            "🎯 3rd Down Efficiency",
-            "📈 Chain Moving",
-            "🟢 Red/Green Zone",
-            "🔮 Winning Probability",
-            "🧪 Pivot Lab",
-            "🧠 Bill Walsh",
-            "📐 Drive Leverage (DLA)",
-            "🕵️ Scout Report",
+        
+         tabs = st.tabs([
+            "Definitions", "Personnel Identity", "3rd Down Efficiency",
+            "Chain Moving", "Red/Green Zone", "Winning Probability",
+            "Pivot Lab", "Bill Walsh", "Drive Leverage (DLA)", "Scout Report"
         ])
-
         # ── TAB 0: DEFINITIONS ───────────────────────────────
         with tabs[0]:
             st.header("📖 Metric Definitions")
@@ -1581,7 +1578,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             st.markdown(answer)
 
         # ── TAB 8: DRIVE LEVERAGE ────────────────────────────
-        with tabs[7]:
+        with tabs[8]:
             st.header("📐 Drive Leverage Score (DLS)")
             st.subheader("Per-Drive Summary")
             st.dataframe(drive_dla.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
@@ -1598,7 +1595,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 st.dataframe(pf_display.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
 
         # ── TAB 9: SCOUT REPORT ──────────────────────────────
-        with tabs[8]:
+        with tabs[9]:
             st.header("🕵️ Opponent Scout Report")
             st.caption("Auto-generated executive overview based on FormationIQ analysis. Use this as your coaching staff briefing.")
             st.divider()
