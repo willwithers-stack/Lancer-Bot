@@ -599,7 +599,7 @@ def build_sss(p_data, cols):
     else:
         sss_summary = pd.DataFrame()
         sss_by_form = pd.DataFrame()
-    return sss_df, sss_summary, sss_by_form
+    return , sss_by_form
 
 def build_fpar(p_data, cols):
     df_p = p_data.copy()
@@ -1077,8 +1077,9 @@ if uploaded_file:
         pf_dla = pf_dla[pf_dla['Plays'] >= 5]
 
         sss_df, sss_summary, sss_by_form = build_sss(p_data, cols)
-        if not sss_df.empty:
+         if 'CausedByForm' in sss_df.columns:
             sss_df['CausedByForm'] = sss_df['CausedByForm'].astype(str)
+        if cols['form'] in sss_df.columns:
             sss_df[cols['form']] = sss_df[cols['form']].astype(str)
         if not sss_by_form.empty:
             sss_by_form.index = sss_by_form.index.astype(str)
