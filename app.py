@@ -1601,5 +1601,5 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 st.divider()
 
     else:
-        st.error(f"Missing required columns: {list(cols.values())}")
+        st.info("Upload a Hudl CSV or Excel file to get started.")
 
