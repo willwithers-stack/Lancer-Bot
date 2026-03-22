@@ -1566,10 +1566,10 @@ Two-digit code: RBs + TEs on the field. Remaining skill players = WRs.
         with tabs[8]:
             st.header(" Drive Leverage Score (DLS)")
             st.subheader("Per-Drive Summary")
-            st.dataframe(drive_dla.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
+            st.dataframe(drive_dla.reset_index().astype({c: str for c in drive_dla.reset_index().select_dtypes('object').columns}), use_container_width=False)
             st.divider()
             st.subheader("Personnel Leverage Profile")
-            st.dataframe(pers_dla.sort_values('DLS', ascending=False).style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
+            st.dataframe(pers_dla.sort_values('DLS', ascending=False).reset_index().astype({c: str for c in pers_dla.sort_values('DLS', ascending=False).reset_index().select_dtypes('object').columns}), use_container_width=False)
             st.divider()
             with st.expander(" Personnel + Formation Leverage (min 5 plays)"):
                 pf_display = pf_dla.sort_values('DLS', ascending=False).reset_index()
