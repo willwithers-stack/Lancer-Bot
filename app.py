@@ -815,13 +815,13 @@ Primary group: **{primary}** ({primary_pct}% of plays, {primary_run}% run / {pri
             tsf = sss_by_form.index[0]
             tsc = int(sss_by_form.iloc[0]['Stress_Count'])
             form_note = f"Formation most responsible: **{tsf}** ({tsc} stress situations generated)."
-        lines.append(("🔥 Stress Pattern Analysis (SSS)", f"""
+        lines.append(("Stress Pattern Analysis (SSS)", f"""
 **{cause_pct} of their 3rd-and-long situations are created by {cause_type} plays**,
 averaging only **{cause_gain} yards** on the prior snap.
 
 {form_note}
 
-⚠️ **Exploit:** Stop their {cause_type.lower()} game on early downs. Hold them below {cause_gain + 1} yards on 1st and 2nd down consistently and you force exactly the stress situations they struggle in. This is the highest--leverage defensive adjustment available.
+**Exploit:** Stop their {cause_type.lower()} game on early downs. Hold them below {cause_gain + 1} yards on 1st and 2nd down consistently and you force exactly the stress situations they struggle in. This is the highest--leverage defensive adjustment available.
 """))
 
     if not fpar_df.empty:
