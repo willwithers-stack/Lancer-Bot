@@ -1163,7 +1163,7 @@ if uploaded_file:
 
         # ── TABS ────────────────────────────────────────────
         
-         tabs = st.tabs([
+        tabs = st.tabs([
             "Definitions", "Personnel Identity", "3rd Down Efficiency",
             "Chain Moving", "Red/Green Zone", "Winning Probability",
             "Pivot Lab", "Bill Walsh", "Drive Leverage (DLA)", "Scout Report"
