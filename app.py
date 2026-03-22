@@ -915,9 +915,10 @@ with st.sidebar:
     st.caption("FormationIQ v9.0 — Final Build")
 
 st.title("🏈 FormationIQ — Offensive Scouting Analytics")
-st.markdown("""
-> Upload a Hudl play--by--play export and instantly break down your opponent's offensive tendencies — by formation, personnel, down, distance, and more.
-""")
+st.markdown(
+    "> Upload a Hudl play-by-play export and instantly break down your "
+    "opponents offensive tendencies - by formation, personnel, down, distance, and more."
+)
 
 col1, col2, col3 = st.columns(3)
 
