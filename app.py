@@ -776,8 +776,8 @@ Explosive plays (15+ yards) account for **{exp_rt}%** of their offense --
         pct_d_f = round((drive_dla['DLS_Grade'].isin(['D','F'])).mean() * 100)
         lines.append(("📐 Drive Control (DLS)", f"""
 Their average **Drive Leverage Score is {avg_dls} (Grade: {dls_g})**.
-**{pct_a_b}% of drives** graded A or B — they maintained favorable situations.
-**{pct_d_f}% of drives** graded D or F — constant stress, behind the chains.
+**{pct_a_b}% of drives** graded A or B -- they maintained favorable situations.
+**{pct_d_f}% of drives** graded D or F -- constant stress, behind the chains.
 Best single-drive DLS: **{best_drive}** | Worst: **{worst_drive}**.
 
 {'⚠️ **Exploit:** Force early negative plays. This offense struggles when taken out of rhythm — their low-leverage drives collapse quickly.' if avg_dls < 0.8 else '⚠️ **Caution:** This offense controls drives well. Stopping them requires consistent TFLs on first down.'}
