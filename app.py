@@ -925,7 +925,7 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.markdown("### 📤 Getting Started")
     st.markdown("""
--- Export your opponent's playlist from **Hudl** as CSV or Excel
+-- Export your opponents playlist from **Hudl** as CSV or Excel
 -- Upload the file using the uploader below
 -- All tabs populate automatically — no setup needed
 """)
