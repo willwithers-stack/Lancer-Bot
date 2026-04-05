@@ -1019,43 +1019,173 @@ averaging only **{cause_gain} yards** on the prior snap.
 ⚠️ **Exploit:** When you take away their top chain-movers they fall back on low-conversion habits. Take away the top plays, invite the bad ones, capitalize on the punt.
 """))
 
-    verdict_score = 0
+    # ── ARCHETYPE + VERDICT ──────────────────────────────────────────────────
+    run_pct_v  = round((p_data[cols['type']] == 'RUN').mean()  * 100)
+    pass_pct_v = round((p_data[cols['type']] == 'PASS').mean() * 100)
+    motion_rt  = 0
+    if cols['motion'] in p_data.columns:
+        motion_rt = round(
+            (p_data[cols['motion']].notna() &
+             (p_data[cols['motion']].astype(str).str.strip() != '')).mean() * 100
+        )
+    non_exp_avg = round(
+        p_data[p_data['Is_Explosive'] == 0][cols['gain']].mean(), 1
+    )
+    int_rate = round(p_data['Is_Int'].sum() / max(len(p_data[p_data[cols['type']] == 'PASS']), 1) * 100, 1)
 
-    if fd_rate >= 30:   verdict_score += 1
-    if fd_rate >= 38:   verdict_score += 1
-    if succ_rt >= 45:   verdict_score += 1
-    if succ_rt >= 52:   verdict_score += 1
-    if exp_rt >= 10:    verdict_score += 1
-    if exp_rt >= 15:    verdict_score += 1
-    if avg_dls >= 0.3:  verdict_score += 1
-    if avg_dls >= 0.7:  verdict_score += 1
-    if avg_gain >= 5.0: verdict_score += 1
-    if avg_gain >= 6.5: verdict_score += 1
+    # ── Identify archetype ────────────────────────────────────────────────────
+    archetype      = None
+    archetype_why  = ""
+    archetype_icon = ""
 
-    # Identify dominant signals
-    strengths = []
-    if avg_gain >= 6.5:   strengths.append(f"elite yards per play ({avg_gain})")
-    elif avg_gain >= 5.0: strengths.append(f"strong yards per play ({avg_gain})")
-    if exp_rt >= 15:      strengths.append(f"dangerous big-play rate ({exp_rt}%)")
-    elif exp_rt >= 10:    strengths.append(f"moderate explosive threat ({exp_rt}%)")
-    if succ_rt >= 52:     strengths.append(f"elite success rate ({succ_rt}%)")
-    elif succ_rt >= 45:   strengths.append(f"above-average success rate ({succ_rt}%)")
-    if fd_rate >= 50:     strengths.append(f"high first down rate ({fd_rate}%)")
-    elif fd_rate >= 38:   strengths.append(f"solid first down rate ({fd_rate}%)")
-    if not drive_dla.empty:
-        dls = round(drive_dla['DLS'].mean(), 2)
-        if dls >= 0.7:    strengths.append(f"controlled drive leverage (DLS: {dls})")
-        elif dls >= 0.3:  strengths.append(f"moderate drive control (DLS: {dls})")
-
-    strength_text = ", ".join(strengths[:3]) if strengths else "balanced production"
-
-    if verdict_score >= 7:
-        verdict = f"🔴 **High-Threat Offense.** Powered by {strength_text}. No single silver bullet — must stop them consistently on every snap."
-    elif verdict_score >= 4:
-        verdict = f"🟡 **Moderate-Threat Offense.** Key weapons: {strength_text}. Attack their stress patterns on early downs and force them behind the chains."
+    if run_pct_v >= 60 and succ_rt >= 48 and exp_rt < 12:
+        archetype      = "The Grinder"
+        archetype_icon = "🔨"
+        archetype_why  = (
+            f"A physical, methodical offense that wins with execution — {run_pct_v}% run rate, "
+            f"{succ_rt}% success rate. They don't need big plays; they'll beat you on every snap "
+            f"if you let them. No shortcuts defensively."
+        )
+    elif pass_pct_v >= 58 and exp_rt >= 14:
+        archetype      = "The Gunslinger"
+        archetype_icon = "🎯"
+        archetype_why  = (
+            f"A big-play passing attack with real punch — {pass_pct_v}% pass rate and {exp_rt}% "
+            f"explosive rate. Give up one rep and it's 6. You must play deep halves early and "
+            f"force them to earn it underneath."
+        )
+    elif exp_rt >= 16 and non_exp_avg < 4.5:
+        archetype      = "The Fragile Giant"
+        archetype_icon = "💥"
+        archetype_why  = (
+            f"Explosive but one-dimensional. Their big-play rate is {exp_rt}%, but without "
+            f"explosives their average drops to {non_exp_avg} yds/play. Take away the home run "
+            f"ball and this offense stalls on its own."
+        )
+    elif motion_rt >= 30 and succ_rt >= 45 and abs(pass_pct_v - run_pct_v) <= 15:
+        archetype      = "The Deceiver"
+        archetype_icon = "🎭"
+        archetype_why  = (
+            f"A multiple, deceptive offense — {motion_rt}% motion rate with a balanced "
+            f"{run_pct_v}/{pass_pct_v} run/pass split and {succ_rt}% success rate. They disguise "
+            f"intent well. You cannot rely on pre-snap reads alone — discipline in assignment is everything."
+        )
+    elif succ_rt >= 52 and avg_dls >= 0.7 and fd_rate >= 38:
+        archetype      = "The Stress Creator"
+        archetype_icon = "⚙️"
+        archetype_why  = (
+            f"An efficient, disciplined offense that rarely beats itself — {succ_rt}% success "
+            f"rate, DLS {avg_dls}, {fd_rate}% FD rate. They don't give you free stops; "
+            f"you have to force mistakes. Win 1st down or expect a long drive."
+        )
+    elif run_pct_v >= 55 and exp_rt >= 12:
+        archetype      = "The Power Bomb"
+        archetype_icon = "💣"
+        archetype_why  = (
+            f"A run-first offense with a shot play mixed in — {run_pct_v}% run rate with "
+            f"{exp_rt}% explosives. They'll pound you to set up the big play. "
+            f"Don't sell out on the run and leave your safety out of position."
+        )
+    elif pass_pct_v >= 58 and succ_rt >= 48 and exp_rt < 12:
+        archetype      = "The Technician"
+        archetype_icon = "📐"
+        archetype_why  = (
+            f"A precision passing offense — {pass_pct_v}% pass rate, {succ_rt}% success rate, "
+            f"low explosive rate ({exp_rt}%). They beat you with completions, not bombs. "
+            f"Rally to the ball quickly; they'll nickel-and-dime you to death if you let them."
+        )
     else:
-        verdict = f"🟢 **Manageable Offense.** Limited by {strength_text if strengths else 'inconsistent execution'}. Force early-down stops and let their tendencies beat them."
-    lines.append(("🎯 Overall Scouting Verdict", verdict))
+        archetype      = "The Balanced Threat"
+        archetype_icon = "⚖️"
+        archetype_why  = (
+            f"A well-rounded offense with no obvious single weakness — {run_pct_v}% run / "
+            f"{pass_pct_v}% pass, {succ_rt}% success rate, {avg_gain} yds/play. "
+            f"You must stop both dimensions. Identify their top tendency early and eliminate it."
+        )
+
+    # ── Identify primary weapon ───────────────────────────────────────────────
+    weapon_desc = ""
+    if not pers_dla.empty:
+        best_pers = pers_dla[pers_dla['Plays'] >= 5].sort_values('DLS', ascending=False)
+        if not best_pers.empty:
+            bp = best_pers.iloc[0]
+            weapon_desc = (
+                f"Personnel **{best_pers.index[0]}** is their most dangerous grouping — "
+                f"DLS {bp['DLS']}, {bp['Avg_Gain']} yds/play, {bp['FD_Rate']}% FD rate."
+            )
+    if not weapon_desc and not chain.empty:
+        top_play = chain.index[0]
+        top_row  = chain.iloc[0]
+        weapon_desc = (
+            f"**{top_play}** is their most reliable chain-mover — "
+            f"{top_row['FD Rate %']}% FD rate across {int(top_row['Plays'])} plays."
+        )
+
+    # ── Identify primary crack ────────────────────────────────────────────────
+    crack_desc = ""
+    if not sss_summary.empty:
+        top_cause = sss_summary.sort_values('Stress %', ascending=False).iloc[0]
+        crack_desc = (
+            f"Their **{top_cause.name.lower()} game** creates **{int(top_cause['Stress %'])}%** "
+            f"of their own 3rd-&-long situations (avg prior gain: {round(top_cause['Avg_Prior_Gain'],1)} yds). "
+            f"Stop it on early downs and their drives collapse."
+        )
+    elif exp_rt >= 14 and non_exp_avg < 4.5:
+        crack_desc = (
+            f"Without explosive plays their avg drops to **{non_exp_avg} yds/play**. "
+            f"Eliminate the big play and this offense has no answer."
+        )
+    elif int_rate >= 5:
+        crack_desc = (
+            f"Their passer throws an interception on **{int_rate}%** of attempts. "
+            f"Force obvious passing situations and play the sticks."
+        )
+    else:
+        crack_desc = (
+            f"They are most vulnerable when taken off-schedule early — "
+            f"a TFL or negative play on 1st down forces the type of 3rd down they struggle to convert."
+        )
+
+    # ── Identify #1 game-plan key ─────────────────────────────────────────────
+    t3_short = p_data[(p_data[cols['dn']] == 3) & (p_data[cols['dist']] <= 3)]
+    t3_long  = p_data[(p_data[cols['dn']] == 3) & (p_data[cols['dist']] >= 7)]
+    gp_key = ""
+    if not crack_desc.startswith("Their **") and not sss_summary.empty:
+        top_cause = sss_summary.sort_values('Stress %', ascending=False).iloc[0]
+        gp_key = (
+            f"Win 1st down against their {top_cause.name.lower()} game. "
+            f"Hold them under {round(top_cause['Avg_Prior_Gain']+1)} yards on early downs "
+            f"and you manufacture the 3rd-&-long situations where they most often self-destruct."
+        )
+    elif len(t3_long) >= 4 and round(t3_long['Is_FD'].mean()*100) <= 30:
+        rate = round(t3_long['Is_FD'].mean()*100)
+        gp_key = (
+            f"Get them to 3rd & long — they convert it only **{rate}%** of the time. "
+            f"Every first-down stop is a likely punt."
+        )
+    elif len(t3_short) >= 4 and round(t3_short['Is_FD'].mean()*100) >= 75:
+        rate = round(t3_short['Is_FD'].mean()*100)
+        gp_key = (
+            f"Avoid short-yardage 3rd downs — they convert {rate}% of 3rd & short. "
+            f"Make them earn it on 2nd down instead of setting up an easy conversion."
+        )
+    else:
+        gp_key = (
+            f"Apply consistent early-down pressure. This offense's rhythm depends on staying "
+            f"ahead of the chains — disrupt that rhythm and the drive stalls on its own."
+        )
+
+    verdict_text = (
+        f"{archetype_icon} **Offensive Archetype: {archetype}**\n\n"
+        f"{archetype_why}\n\n"
+        f"---\n\n"
+        f"**Primary Weapon:** {weapon_desc}\n\n"
+        f"**Exploitable Crack:** {crack_desc}\n\n"
+        f"**#1 Game-Plan Key:** {gp_key}"
+    )
+    lines.append(("🎯 Overall Scouting Verdict", verdict_text))
+    return lines
+
     return lines
 
 
