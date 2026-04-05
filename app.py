@@ -1222,7 +1222,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
         with tabs[1]:
             st.header("📊 Personnel Identity")
             st.subheader("Overall Usage")
-            st.dataframe(pers_counts, use_container_width=False)
+            st.dataframe(pers_counts, use_container_width='content')
             st.divider()
             c1, c2 = st.columns(2)
             with c1:
@@ -1235,7 +1235,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 )
                 run_pers['Avg_Gain'] = run_pers['Avg_Gain'].round(1)
                 run_pers['Run %'] = (run_pers['Plays'] / run_pers['Plays'].sum() * 100).round(0).astype(int)
-                st.dataframe(run_pers.style.background_gradient(cmap='RdYlGn', subset=['Avg_Gain']), use_container_width=False)
+                st.dataframe(run_pers.style.background_gradient(cmap='RdYlGn', subset=['Avg_Gain']), use_container_width='content')
             with c2:
                 st.subheader("🎯 Top 5 Pass Personnel")
                 pass_pers = (
@@ -1246,14 +1246,14 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 )
                 pass_pers['Avg_Gain'] = pass_pers['Avg_Gain'].round(1)
                 pass_pers['Pass %'] = (pass_pers['Plays'] / pass_pers['Plays'].sum() * 100).round(0).astype(int)
-                st.dataframe(pass_pers.style.background_gradient(cmap='RdYlGn', subset=['Avg_Gain']), use_container_width=False)
+                st.dataframe(pass_pers.style.background_gradient(cmap='RdYlGn', subset=['Avg_Gain']), use_container_width='content')
             st.divider()
             st.subheader("Run/Pass Tendency by Personnel")
             rp_split = (
                 p_data.groupby('PERSONNEL')[cols['type']]
                 .value_counts(normalize=True).unstack().fillna(0).mul(100).round(0).astype(int)
             )
-            st.dataframe(rp_split.style.background_gradient(cmap='RdYlGn_r'), use_container_width=False)
+            st.dataframe(rp_split.style.background_gradient(cmap='RdYlGn_r'), use_container_width='content')
 
         # ── TAB 2: 3RD DOWN ─────────────────────────────────
         with tabs[2]:
@@ -1265,7 +1265,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                     st.table(t3_summary)
                 with c2:
                     t3_tend = t3.groupby('Sit')[cols['type']].value_counts(normalize=True).unstack().fillna(0).mul(100).round(0).astype(int)
-                    st.dataframe(t3_tend.style.background_gradient(cmap='RdYlGn_r').format("{:d}%"), use_container_width=False)
+                    st.dataframe(t3_tend.style.background_gradient(cmap='RdYlGn_r').format("{:d}%"), use_container_width='content')
                 for sit in ["3rd & Short (1-3)", "3rd & Mid (4-7)", "3rd & Long (7+)"]:
                     with st.expander(f"Top Calls: {sit}"):
                         st.table(t3[t3['Sit'] == sit][cols['play']].value_counts().head(3))
@@ -1281,7 +1281,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             st.divider()
             st.dataframe(
                 chain.style.background_gradient(cmap='RdYlGn', subset=['FD Rate %','Success Rate %']),
-                use_container_width=False
+                use_container_width='content'
             )
 
         # ── TAB 4: RED/GREEN ZONE ────────────────────────────
@@ -1314,7 +1314,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             if not intel_df.empty:
                 st.dataframe(
                     intel_df.set_index('Category'),
-                    use_container_width=True,
+                    use_container_width='Stretch',
                     column_config={
                         "Signal":        st.column_config.TextColumn("Signal",        width=200),
                         "Stat":          st.column_config.TextColumn("Stat",          width=160),
@@ -1331,13 +1331,13 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 c1, c2 = st.columns(2)
                 with c1:
                     st.write("**By Play Type**")
-                    st.dataframe(sss_summary.style.background_gradient(cmap='RdYlGn_r', subset=['Stress %']), use_container_width=False)
+                    st.dataframe(sss_summary.style.background_gradient(cmap='RdYlGn_r', subset=['Stress %']), use_container_width='content')
                 with c2:
                     st.write("**Top Formations Creating Stress**")
-                    st.dataframe(sss_by_form.style.background_gradient(cmap='RdYlGn_r', subset=['Stress_Count']), use_container_width=False)
+                    st.dataframe(sss_by_form.style.background_gradient(cmap='RdYlGn_r', subset=['Stress_Count']), use_container_width='content')
                 with st.expander("📋 Full Stress Play Log"):
                     sss_display = sss_df.reset_index(drop=True).astype(str)
-                    st.dataframe(sss_display, use_container_width=False)
+                    st.dataframe(sss_display, use_container_width='content')
             else:
                 st.info("No 3rd & long stress situations found.")
 
@@ -1345,12 +1345,12 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             st.subheader("🗺️ Field Position Aggression Rating (FPAR)")
             st.caption("Pass rate, success rate, and avg gain by field zone and down.")
             if not fpar_df.empty:
-                st.dataframe(fpar_df.style.background_gradient(cmap='RdYlGn', subset=['Success_Rate']), use_container_width=False)
+                st.dataframe(fpar_df.style.background_gradient(cmap='RdYlGn', subset=['Success_Rate']), use_container_width='content')
                 st.write("**1st Down Pass Rate by Zone**")
                 zone_1st = fpar_df.reset_index()
                 zone_1st = zone_1st[zone_1st[cols['dn']] == 1][['Field_Zone','Pass_Rate','Success_Rate','Avg_Gain']]
                 if not zone_1st.empty:
-                    st.dataframe(zone_1st.set_index('Field_Zone').style.background_gradient(cmap='RdYlGn', subset=['Success_Rate']), use_container_width=False)
+                    st.dataframe(zone_1st.set_index('Field_Zone').style.background_gradient(cmap='RdYlGn', subset=['Success_Rate']), use_container_width='content')
             else:
                 st.info("Not enough data for field position analysis.")
 
@@ -1477,7 +1477,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
 
                 st.dataframe(
                     pivot_result.style.background_gradient(cmap='RdYlGn', subset=numeric_cols),
-                    use_container_width=True
+                    use_container_width='stretch'
                 )
 
                 # ── EXPORT THIS VIEW ─────────────────────
@@ -1500,10 +1500,10 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
         with tabs[5]:
             st.header("📐 Drive Leverage Score (DLS)")
             st.subheader("Per-Drive Summary")
-            st.dataframe(drive_dla.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
+            st.dataframe(drive_dla.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width='content')
             st.divider()
             st.subheader("Personnel Leverage Profile")
-            st.dataframe(pers_dla.sort_values('DLS', ascending=False).style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
+            st.dataframe(pers_dla.sort_values('DLS', ascending=False).style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width='content')
             st.divider()
             with st.expander("📋 Personnel + Formation Leverage (min 5 plays)"):
                 pf_display = pf_dla.sort_values('DLS', ascending=False).reset_index()
@@ -1513,7 +1513,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 for col in ['DLS','Avg_Gain','FD_Rate','Success_Rate','Explosive_Rt','High_Lev%','Low_Lev%']:
                     if col in pf_display.columns:
                         pf_display[col] = pd.to_numeric(pf_display[col], errors='coerce')
-                st.dataframe(pf_display.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
+                st.dataframe(pf_display.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width='content')
 
         # ── TAB 8: SCOUT REPORT ──────────────────────────────
         with tabs[5]:
