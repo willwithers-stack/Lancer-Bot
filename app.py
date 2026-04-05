@@ -4,61 +4,6 @@ import re
 import os
 import numpy as np
 from io import BytesIO
-from openai import OpenAI
-client = OpenAI()
-# ── BILL WALSH LLM ────────────────────────────────────
-WALSH_SYSTEM_PROMPT = """
-You are an offensive head coach modeled after Bill Walsh.
-
-Background:
-- Pioneered a precise, timing-based passing system often called the West Coast offense.
-- Values meticulous preparation, scripting openers, and exploiting defensive tendencies.
-- Leads with a demanding 'standard of performance' emphasizing discipline, detail, and professionalism.
-
-Style:
-- Calm, analytical, and teaching-oriented.
-- Use specific football terminology (formations, personnel, coverages, down/distance).
-- Focus on tendencies, matchups, and game-planning, not clichés.
-
-When a coach asks a question:
-1) Briefly state what you see in the opponent tendencies.
-2) Give 3–6 concrete coaching points or game-plan ideas in bullets.
-3) Keep answers concise enough to scan quickly in a meeting.
-"""
-
-def summarize_view(df: pd.DataFrame) -> str:
-    if df.empty:
-        return "No plays in view."
-    total = len(df)
-    run_rate = round(df[cols['type']].eq("RUN").mean() * 100, 1)
-    pass_rate = round(df[cols['type']].eq("PASS").mean() * 100, 1)
-    avg_gain  = round(df[cols['gain']].mean(), 2)
-    top_forms = df[cols['form']].value_counts().head(3).to_dict()
-    top_pers  = df["PERSONNEL"].value_counts().head(3).to_dict()
-    lines = [
-        f"Total plays in view: {total}.",
-        f"Run rate: {run_rate}%, Pass rate: {pass_rate}%.",
-        f"Average gain: {avg_gain} yards.",
-        f"Top formations: {top_forms}.",
-        f"Top personnel groups: {top_pers}.",
-    ]
-    return "\n".join(lines)
-
-def call_walsh_llm(summary_text: str, question: str) -> str:
-    resp = client.responses.create(
-        model="gpt-4.1-mini",
-        input=[
-            {"role": "system", "content": WALSH_SYSTEM_PROMPT},
-            {"role": "user",
-             "content": f"Opponent tendency summary:\n{summary_text}\n\nCoach question:\n{question}"}
-        ],
-    )
-    return resp.output[0].content[0].text
-
-
-# ============================================================
-# EXCEL EXPORT
-# ============================================================
 
 def build_excel_export(export_dict, p_data, drive_dla, pers_dla,
                        fpar_df, sss_summary,
@@ -1158,7 +1103,7 @@ if uploaded_file:
             "🎯 3rd Down Efficiency",
             "📈 Chain Moving",
             "🟢 Red/Green Zone",
-            "🔮 Winning Probability",
+            "🔮 Scouting Intelligence",
             "🧪 Pivot Lab",
             "📐 Drive Leverage (DLA)",
             "🕵️ Scout Report",
@@ -1362,7 +1307,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
 
         # ── TAB 5: WINNING PROBABILITY ───────────────────────
         with tabs[5]:
-            st.header("🔮 Winning Probability (AI)")
+            st.header("🔮 Scouting Intelligence")
 
             st.subheader("🤖 AI Scouting Intelligence")
             st.caption("Auto-detected behavioral patterns and tendencies from play-by-play data.")
@@ -1410,7 +1355,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 st.info("Not enough data for field position analysis.")
 
         # ── TAB 6: PIVOT LAB ─────────────────────────────────
-        with tabs[6]:
+        with tabs[5]:
             st.header("🧪 Pivot Lab")
             st.caption("Build your own custom views. Filter, group, and export any combination of data.")
             # ── FILTERS ─────────────────────────────────
@@ -1552,7 +1497,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
 
 
         # ── TAB 7: DRIVE LEVERAGE ────────────────────────────
-        with tabs[7]:
+        with tabs[5]:
             st.header("📐 Drive Leverage Score (DLS)")
             st.subheader("Per-Drive Summary")
             st.dataframe(drive_dla.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
@@ -1569,7 +1514,7 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
                 st.dataframe(pf_display.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width=False)
 
         # ── TAB 8: SCOUT REPORT ──────────────────────────────
-        with tabs[8]:
+        with tabs[5]:
             st.header("🕵️ Opponent Scout Report")
             st.caption("Auto-generated executive overview based on FormationIQ analysis. Use this as your coaching staff briefing.")
             st.divider()
