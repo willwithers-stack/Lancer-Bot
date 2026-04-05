@@ -971,8 +971,7 @@ if uploaded_file:
         p_data['Is_Explosive'] = (p_data[cols['gain']] >= 15).astype(int)
 
         p_data[cols['form']] = p_data[cols['form']].astype(str)
-      leva = p_data.apply(
-            lambda r: classify_leverage(r[cols['dn']], r[cols['dist']], r[cols['field']]), axis=1
+      leva = p_data.apply(lambda r: classify_leverage(r[cols['dn']], r[cols['dist']], r[cols['field']]), axis=1
         )
         p_data['Leverage_Band']  = leva.apply(lambda x: x[0])
         p_data['Leverage_Score'] = leva.apply(lambda x: x[1])
