@@ -1507,7 +1507,9 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
             st.divider()
             with st.expander("📋 Personnel + Formation Leverage (min 5 plays)"):
                 pf_display = pf_dla.sort_values('DLS', ascending=False).reset_index()
-                pf_display.select_dtypes(include=['object', 'str']).columns})
+                pf_display = pf_display.astype(
+    {c: str for c in pf_display.select_dtypes(include=['object', 'str']).columns}
+)
                 for col in ['DLS','Avg_Gain','FD_Rate','Success_Rate','Explosive_Rt','High_Lev%','Low_Lev%']:
                     if col in pf_display.columns:
                         pf_display[col] = pd.to_numeric(pf_display[col], errors='coerce')
