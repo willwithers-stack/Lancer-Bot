@@ -522,7 +522,7 @@ def build_sss(p_data, cols):
                 'Stress_Situation': f"3rd & {df_s.loc[idx, cols['dist']]}",
                 'Caused_By_Play':   prev[cols['play']],
                 'Caused_By_Type':   prev[cols['type']],
-                'Caused_By_Form':   prev[cols['form']],
+                'Caused_By_Form':   str(prev[cols['form']]),
                 'Prior_Gain':       prev[cols['gain']],
                 'Prior_Result':     prev[cols['result']],
             })
@@ -970,8 +970,9 @@ if uploaded_file:
         p_data['Is_Succ']      = p_data.apply(calc_succ, axis=1).astype(int)
         p_data['Is_Explosive'] = (p_data[cols['gain']] >= 15).astype(int)
         p_data[cols['form']] = p_data[cols['form']].astype(str)
-        
-      leva = p_data.apply(lambda r: classify_leverage(r[cols['dn']], r[cols['dist']], r[cols['field']]), axis=1
+
+        leva = p_data.apply(
+            lambda r: classify_leverage(r[cols['dn']], r[cols['dist']], r[cols['field']]), axis=1
         )
         p_data['Leverage_Band']  = leva.apply(lambda x: x[0])
         p_data['Leverage_Score'] = leva.apply(lambda x: x[1])
