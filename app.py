@@ -633,6 +633,33 @@ def build_top10_tendencies(p_data, cols):
     return deduped[:10]
 
 
+def detect_export_type(df):
+    """Returns (is_playlist, pct_non_sequential). Playlist = plays not in order."""
+    play_num = pd.to_numeric(df['PLAY #'], errors='coerce')
+    diffs = play_num.diff().dropna()
+    pct = (diffs != 1).sum() / max(len(diffs), 1)
+    return pct > 0.30, round(pct * 100, 1)
+
+
+def assign_drive_ids(df):
+    """
+    Robust Drive_ID + Game_ID assignment.
+    Game boundary: PLAY # resets backward  OR  QTR jumps 4 → 1.
+    Drive boundary: ODK value changes within a game.
+    """
+    play_num = pd.to_numeric(df['PLAY #'], errors='coerce')
+    qtr      = pd.to_numeric(df['QTR'],    errors='coerce').fillna(0)
+    play_reset    = play_num < play_num.shift(1)
+    qtr_reset     = (qtr < qtr.shift(1)) & (qtr.shift(1) >= 4) & (qtr <= 1)
+    game_boundary = (play_reset | qtr_reset).fillna(False)
+    odk_change    = df['ODK'] != df['ODK'].shift()
+    new_segment   = (game_boundary | odk_change).fillna(True)
+    df = df.copy()
+    df['Game_ID']  = game_boundary.cumsum() + 1
+    df['Drive_ID'] = new_segment.cumsum()
+    return df
+
+
 def classify_leverage(dn, dist, yard_ln=None):
     try:
         d, y = int(dn), int(dist)
@@ -1298,7 +1325,8 @@ if uploaded_file:
         df[cols['dn']]    = pd.to_numeric(df[cols['dn']],    errors='coerce').fillna(0).astype(int)
         df[cols['dist']]  = pd.to_numeric(df[cols['dist']],  errors='coerce').fillna(0).astype(int)
         df[cols['field']] = pd.to_numeric(df[cols['field']], errors='coerce').fillna(0).astype(int)
-        df['Drive_ID']    = (df[cols['odk']] != df[cols['odk']].shift()).cumsum()
+        is_playlist, pct_nonseq = detect_export_type(df)
+        df = assign_drive_ids(df)
 
         p_data = df[df[cols['type']].isin(['RUN', 'PASS'])].copy()
         p_data['PERSONNEL'] = p_data[cols['form']].apply(process_offensive_logic)
@@ -1844,6 +1872,13 @@ Two-digit code: **RBs + TEs** on the field. Remaining skill players = WRs.
 
         # ── TAB 7: DRIVE LEVERAGE ────────────────────────────
         with tabs[7]:
+            if is_playlist:
+                st.warning(
+                    f"⚠️ **Playlist export detected** ({pct_nonseq}% of play "
+                    "numbers are non-sequential). Drive Leverage analysis requires "
+                    "a single-game chronological export from Hudl. "
+                    "DLA results below may not be meaningful."
+                )
             st.header("📐 Drive Leverage Score (DLS)")
             st.subheader("Per-Drive Summary")
             st.dataframe(drive_dla.style.background_gradient(cmap='RdYlGn', subset=['DLS']), use_container_width='content')
