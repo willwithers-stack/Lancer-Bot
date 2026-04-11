@@ -473,7 +473,7 @@ def build_top10_tendencies(p_data, cols):
             'Finding':        title,
             'Situation':      situation,
             'Sample':         n,
-            'Edge vs Base':   ('+' if edge_pct > 0 else '') + str(round(edge_pct)) + 'pts',
+            'Edge vs Base':   (f"+{abs(round(edge_pct))}pts toward RUN" if edge_pct < 0 else f"+{round(edge_pct)}pts toward PASS"),
             'Success Rate':   str(round(sub['Is_Succ'].mean()*100, 1)) + '%',
             'Explosive Rate': str(round(sub['Is_Explosive'].mean()*100, 1)) + '%',
             'FD Rate':        str(round(sub['Is_FD'].mean()*100, 1)) + '%',
