@@ -338,32 +338,69 @@ with st.sidebar:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
-tabs = st.tabs(["Overview", "Formation IQ", "Down & Distance", "Situation + Score", "Motion IQ", "Score Timeline", "Pivot Lab"])
+tabs = st.tabs([
+    "Overview",
+    "Formation IQ",
+    "Situation + Score",
+    "Down & Distance",
+    "Motion IQ",
+    "Score Timeline",
+    "Pivot Lab",
+])
 
 with tabs[0]:
     st.subheader("Defensive Call Sheet")
     st.dataframe(call_sheet(p_data), use_container_width=True, hide_index=True)
+
     st.subheader("Overall Offensive Profile")
     summary = tendency(p_data.groupby(lambda _: "Overall"))
     st.dataframe(summary, use_container_width=True, hide_index=True)
 
 with tabs[1]:
     st.subheader("Base Formation Tendencies")
-    st.dataframe(tendency(p_data.groupby("Formation")).sort_values("Plays", ascending=False), use_container_width=True, hide_index=True)
+    st.dataframe(
+        tendency(p_data.groupby("Formation")).sort_values("Plays", ascending=False),
+        use_container_width=True,
+        hide_index=True,
+    )
 
 with tabs[2]:
     st.subheader("Down / Distance by Score State")
-    st.dataframe(tendency(p_data.groupby(["Score State", "Situation"])).sort_values(["Score State", "Plays"], ascending=[True, False]), use_container_width=True, hide_index=True)
-
-with tabs[3]:
-        st.subheader("Down & Distance Report")
-    st.caption(
-        "Run/pass tendency, production, and concept detail by offensive "
-        "down-and-distance situation."
+    st.dataframe(
+        tendency(
+            p_data.groupby(["Score State", "Situation"])
+        ).sort_values(["Score State", "Plays"], ascending=[True, False]),
+        use_container_width=True,
+        hide_index=True,
     )
 
-    dd_report = down_distance_report(p_data)
+with tabs[3]:
+    st.subheader("Down & Distance Report")
+    st.caption(
+        "Run/pass tendency, production, formation detail, and play-by-play "
+        "by offensive down-and-distance situation."
+    )
 
+    situation_order = [
+        "1st Down",
+        "2nd Short (1-5)",
+        "2nd Medium (6-9)",
+        "2nd Long (10+)",
+        "3rd Short (1-3)",
+        "3rd Medium (4-6)",
+        "3rd Long (7+)",
+        "4th Down",
+    ]
+
+    dd_report = tendency(p_data.groupby("Situation", sort=False))
+    dd_report["Situation"] = pd.Categorical(
+        dd_report["Situation"],
+        categories=situation_order,
+        ordered=True,
+    )
+    dd_report = dd_report.sort_values("Situation").reset_index(drop=True)
+
+    st.subheader("Overall Tendency by Situation")
     st.dataframe(
         dd_report,
         use_container_width=True,
@@ -375,8 +412,9 @@ with tabs[3]:
     st.subheader("Formation Detail by Situation")
 
     situation_options = [
-        value for value in dd_report["Situation"].astype(str).tolist()
-        if value != "nan"
+        situation
+        for situation in situation_order
+        if situation in p_data["Situation"].unique()
     ]
 
     selected_situation = st.selectbox(
@@ -454,32 +492,136 @@ with tabs[3]:
             use_container_width=True,
             hide_index=True,
         )
-with tabs[4]: st.subheader("Motion by Formation")
-    st.dataframe(tendency(p_data.groupby(["Motion", "Formation"])).sort_values("Plays", ascending=False), use_container_width=True, hide_index=True)
+
+with tabs[4]:
+    st.subheader("Motion by Formation")
+    st.dataframe(
+        tendency(
+            p_data.groupby(["Motion", "Formation"])
+        ).sort_values("Plays", ascending=False),
+        use_container_width=True,
+        hide_index=True,
+    )
 
 with tabs[5]:
     st.subheader("Scoring Events")
-    scoring = full_data[(full_data["TP Points Added"] > 0) | (full_data["Opponent Points Added"] > 0)]
-    st.dataframe(scoring[["Game_ID", "Play_Order", COLS["quarter"], COLS["result"], "Scoring Team", "TP Points Added", "Opponent Points Added", "TP Score Before", "Opponent Score Before", "Score Differential Before"]], use_container_width=True, hide_index=True)
+
+    scoring = full_data[
+        (full_data["TP Points Added"] > 0)
+        | (full_data["Opponent Points Added"] > 0)
+    ]
+
+    st.dataframe(
+        scoring[
+            [
+                "Game_ID",
+                "Play_Order",
+                COLS["quarter"],
+                COLS["result"],
+                "Scoring Team",
+                "TP Points Added",
+                "Opponent Points Added",
+                "TP Score Before",
+                "Opponent Score Before",
+                "Score Differential Before",
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True,
+    )
+
     st.subheader("Calculated Finals")
-    st.dataframe(full_data.groupby("Game_ID").agg(TP_Final=("TP Points Added", "sum"), Opponent_Final=("Opponent Points Added", "sum")).reset_index(), use_container_width=True, hide_index=True)
+    st.dataframe(
+        full_data.groupby("Game_ID").agg(
+            TP_Final=("TP Points Added", "sum"),
+            Opponent_Final=("Opponent Points Added", "sum"),
+        ).reset_index(),
+        use_container_width=True,
+        hide_index=True,
+    )
 
 with tabs[6]:
     st.subheader("Custom Pivot")
-    available = ["Formation", "Motion", "Situation", "Score State", COLS["strength"], COLS["hash"], COLS["quarter"], COLS["concept"]]
+
+    available = [
+        "Formation",
+        "Motion",
+        "Situation",
+        "Score State",
+        COLS["strength"],
+        COLS["hash"],
+        COLS["quarter"],
+        COLS["concept"],
+    ]
+
     group = st.selectbox("Group by", available)
-    metric = st.selectbox("Metric", ["Run/Pass Tendency", "Avg Gain", "Success %", "Explosive %", "Play Count"])
+
+    metric = st.selectbox(
+        "Metric",
+        [
+            "Run/Pass Tendency",
+            "Avg Gain",
+            "Success %",
+            "Explosive %",
+            "Play Count",
+        ],
+    )
+
     if metric == "Run/Pass Tendency":
-        result = tendency(p_data.groupby(group)).sort_values("Plays", ascending=False)
+        result = tendency(
+            p_data.groupby(group)
+        ).sort_values("Plays", ascending=False)
+
     elif metric == "Avg Gain":
-        result = p_data.groupby(group).agg(Plays=(COLS["play_no"], "size"), Avg_Gain=(COLS["gain"], "mean")).reset_index().sort_values("Plays", ascending=False)
+        result = (
+            p_data.groupby(group)
+            .agg(
+                Plays=(COLS["play_no"], "size"),
+                Avg_Gain=(COLS["gain"], "mean"),
+            )
+            .reset_index()
+            .sort_values("Plays", ascending=False)
+        )
         result["Avg_Gain"] = result["Avg_Gain"].round(1)
+
     elif metric == "Success %":
-        result = p_data.groupby(group).agg(Plays=(COLS["play_no"], "size"), Success_Percent=("Is_Succ", "mean")).reset_index().sort_values("Plays", ascending=False)
-        result["Success_Percent"] = (result["Success_Percent"] * 100).round(1)
+        result = (
+            p_data.groupby(group)
+            .agg(
+                Plays=(COLS["play_no"], "size"),
+                Success_Percent=("Is_Succ", "mean"),
+            )
+            .reset_index()
+            .sort_values("Plays", ascending=False)
+        )
+        result["Success_Percent"] = (
+            result["Success_Percent"] * 100
+        ).round(1)
+
     elif metric == "Explosive %":
-        result = p_data.groupby(group).agg(Plays=(COLS["play_no"], "size"), Explosive_Percent=("Explosive", "mean")).reset_index().sort_values("Plays", ascending=False)
-        result["Explosive_Percent"] = (result["Explosive_Percent"] * 100).round(1)
+        result = (
+            p_data.groupby(group)
+            .agg(
+                Plays=(COLS["play_no"], "size"),
+                Explosive_Percent=("Explosive", "mean"),
+            )
+            .reset_index()
+            .sort_values("Plays", ascending=False)
+        )
+        result["Explosive_Percent"] = (
+            result["Explosive_Percent"] * 100
+        ).round(1)
+
     else:
-        result = p_data.groupby(group).size().reset_index(name="Plays").sort_values("Plays", ascending=False)
-    st.dataframe(result, use_container_width=True, hide_index=True)
+        result = (
+            p_data.groupby(group)
+            .size()
+            .reset_index(name="Plays")
+            .sort_values("Plays", ascending=False)
+        )
+
+    st.dataframe(
+        result,
+        use_container_width=True,
+        hide_index=True,
+    )
