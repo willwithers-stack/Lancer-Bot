@@ -341,8 +341,8 @@ with st.sidebar:
 tabs = st.tabs([
     "Overview",
     "Formation IQ",
-    "Situation + Score",
     "Down & Distance",
+    "Situation + Score",
     "Motion IQ",
     "Score Timeline",
     "Pivot Lab",
@@ -364,7 +364,7 @@ with tabs[1]:
         hide_index=True,
     )
 
-with tabs[2]:
+with tabs[3]:
     st.subheader("Down / Distance by Score State")
     st.dataframe(
         tendency(
@@ -374,7 +374,7 @@ with tabs[2]:
         hide_index=True,
     )
 
-with tabs[3]:
+with tabs[2]:
     st.subheader("Down & Distance Report")
     st.caption(
         "Run/pass tendency, production, formation detail, and play-by-play "
