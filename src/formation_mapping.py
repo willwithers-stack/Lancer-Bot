@@ -26,9 +26,17 @@ def _match(text: str, rules) -> str | None:
 
 
 def formation_family(raw, rules=FORMATION_FAMILY_RULES) -> str:
+    """Never returns 'Other'. If no family rule matches, the tag becomes its own
+    family (side words removed, so 'Wildcat Rt' and 'Wildcat Lt' pool as WILDCAT)."""
     if pd.isna(raw) or not str(raw).strip():
-        return "Unknown"
-    return _match(raw, rules) or "Other"
+        return "Not Tagged"
+    return _match(raw, rules) or formation_standard(raw)
+
+
+def family_source(raw, rules=FORMATION_FAMILY_RULES) -> str:
+    if pd.isna(raw) or not str(raw).strip():
+        return "Blank"
+    return "Family rule" if _match(raw, rules) else "Own tag"
 
 
 def qb_alignment(raw, backfield="", rules=QB_ALIGNMENT_RULES) -> str:
@@ -82,6 +90,7 @@ def apply_formation_mapping(df: pd.DataFrame, family_rules=FORMATION_FAMILY_RULE
     strength = data.get("Strength", pd.Series("", index=data.index))
     data["Formation_Standard"] = raw.map(formation_standard)
     data["Formation_Family"] = raw.map(lambda r: formation_family(r, family_rules))
+    data["Family_Source"] = raw.map(lambda r: family_source(r, family_rules))
     data["QB_Alignment"] = [qb_alignment(r, b) for r, b in zip(raw, backfield)]
     data["Formation_Modifier"] = raw.map(formation_modifiers)
     data["Near_Far"] = [near_far(r, b, s) for r, b, s in zip(raw, backfield, strength)]
@@ -89,7 +98,8 @@ def apply_formation_mapping(df: pd.DataFrame, family_rules=FORMATION_FAMILY_RULE
 
 
 def unmapped_formations(df: pd.DataFrame) -> pd.DataFrame:
-    """Raw tags that fell into 'Other' — show these to the coach so the dictionary can grow."""
-    other = df[df["Formation_Family"] == "Other"]
-    return (other.groupby("Formation_Raw").size().rename("Plays")
+    """Tags that matched no family rule and are standing as their own family.
+    Shown to the coach so they can be added to a family in config.py if wanted."""
+    own = df[df["Family_Source"] == "Own tag"]
+    return (own.groupby(["Formation_Raw", "Formation_Family"]).size().rename("Plays")
             .sort_values(ascending=False).reset_index())

@@ -119,3 +119,11 @@ def test_score_rebuild_and_no_clear_lean():
     f = final_scores(meta["score_rows"]).iloc[0]
     assert (f["Scouted_Final"], f["Opponent_Final"]) == (7, 10)
     assert list(clean["Score_Differential"]) == [0, 0]   # 2nd snap: 7-7 before the snap
+
+
+def test_family_never_other():
+    from src.formation_mapping import formation_family
+    for tag in ["Wildcat Rt", "Swinging Gate", "Unbalanced Lt", "Q", "Diamond"]:
+        assert formation_family(tag) != "Other"
+    assert formation_family("Wildcat Rt") == formation_family("Wildcat Lt") == "WILDCAT"
+    assert formation_family(None) == "Not Tagged"

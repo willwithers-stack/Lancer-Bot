@@ -205,8 +205,9 @@ with tabs[2]:
     show(T["qb"], ["QB_Alignment"])
     if tagged(["Personnel"]):
         show(tendency_table(data, ["Personnel", "Formation_Family"]), ["Personnel", "Formation_Family"])
-    st.subheader("Raw formation tags not mapped to a family")
-    show(unmapped_formations(data), empty_msg="Every formation tag mapped to a family.")
+    st.subheader("Tags standing as their own family")
+    st.caption("These matched no family rule, so they keep their own name. Add them to a family in config.py if they belong with one.")
+    show(unmapped_formations(data), empty_msg="Every formation tag matched a family rule.")
 
 with tabs[3]:
     if not tagged(["Motion_Flag"]):
