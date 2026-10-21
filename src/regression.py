@@ -52,6 +52,7 @@ def fit_run_pass_model(df: pd.DataFrame, feature_columns: list[str], C: float = 
 
     # Held-out validation by game
     games = data["Game_ID"].astype(str).to_numpy()
+    held_out = np.full(len(y), np.nan)
     validation = {"Games": int(len(set(games))), "Snaps": int(len(y)), "Team_Pass_Rate": float(base_rate)}
     if len(set(games)) >= MIN_REGRESSION_GAMES:
         probs = np.zeros(len(y))
@@ -60,6 +61,7 @@ def fit_run_pass_model(df: pd.DataFrame, feature_columns: list[str], C: float = 
                 probs[te] = y[tr].mean()
                 continue
             probs[te] = _pipeline(features, C).fit(x.iloc[tr], y[tr]).predict_proba(x.iloc[te])[:, 1]
+        held_out = probs.copy()
         pred = (probs >= 0.5).astype(int)
         baseline_acc = max(base_rate, 1 - base_rate)
         validation.update({
@@ -91,6 +93,6 @@ def fit_run_pass_model(df: pd.DataFrame, feature_columns: list[str], C: float = 
                                     labels=["Weak", "Moderate", "Strong"])
     coef_table = coef_table.reindex(coef_table["Coefficient"].abs().sort_values(ascending=False).index)
 
-    data = data.assign(Model_Pass_Prob=model.predict_proba(x)[:, 1])
+    data = data.assign(Model_Pass_Prob=model.predict_proba(x)[:, 1], Held_Out_Pass_Prob=held_out)
     return {"model": model, "features": features, "validation": validation,
             "coefficients": coef_table.reset_index(drop=True), "scored": data}, None

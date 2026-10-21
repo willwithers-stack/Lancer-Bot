@@ -127,3 +127,13 @@ def test_family_never_other():
         assert formation_family(tag) != "Other"
     assert formation_family("Wildcat Rt") == formation_family("Wildcat Lt") == "WILDCAT"
     assert formation_family(None) == "Not Tagged"
+
+
+def test_accuracy_check_pending_under_three_games():
+    from src.verification import verify_alerts, PENDING
+    df = pd.DataFrame({"Run_Pass": ["Run"] * 9 + ["Pass"] * 1 + ["Pass"] * 10, "Game_ID": ["G1", "G2"] * 10,
+                       "Formation_Family": ["I"] * 10 + ["DUBS"] * 10})
+    a = build_run_pass_alerts(df, ["Formation_Family"])
+    v = verify_alerts(a, df, ["Formation_Family"], None)
+    assert set(v["Accuracy_Check"]) <= {PENDING, "Film Only"}
+    assert "Held_Up" in v.columns

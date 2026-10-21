@@ -15,6 +15,7 @@ from src.regression import fit_run_pass_model
 from src.trick_plays import build_trick_play_inventory
 from src.scoring import score_timeline, final_scores
 from src.report_builder import build_workbook
+from src.verification import verify_alerts
 
 st.set_page_config(page_title="FormationIQ", page_icon="🏈", layout="wide")
 st.title("FormationIQ")
@@ -22,7 +23,14 @@ st.caption("Upload Hudl game files (one per game). Tendencies use the team tagge
 
 PCT_COLS = ["Run_Rate", "Pass_Rate", "Rate", "Team_Baseline", "Lift"]
 CORE_COLS = ["Plays", "Games", "Run", "Pass", "Tendency", "Rate", "Lift", "Confidence"]
-ALERT_COLS = CORE_COLS + ["Alert_Level", "Coaching_Implication"]
+ALERT_COLS = CORE_COLS + ["Accuracy_Check", "Held_Up", "Alert_Level", "Coaching_Implication"]
+PROMISE = (
+    "**FormationIQ Accuracy Promise**  \n"
+    "Every number is counted straight from your Hudl tags, with no estimates. "
+    "Every tell is tested against games it wasn't built from before it earns **✓\u00a0Verified**. "
+    "If a number ever doesn't match your film, you can trace it to the exact play in the play-by-play.  \n"
+    "Tendencies show what an offense has done, not a promise of what it will call."
+)
 DD_ORDER = [f"{d} & {k}" for d in ("1st", "2nd", "3rd", "4th") for k in ("Short", "Medium", "Long", "Extra")]
 
 # ---------------------------------------------------------------- sidebar
@@ -95,9 +103,11 @@ st.success(f"Processed {len(data):,} offensive snaps across {games} game(s): {',
 # ---------------------------------------------------------------- build tables once (used by tabs + Excel)
 form_cols = tagged(["Formation_Family", "Near_Far"])
 comp_cols = tagged(["Formation_Family", "Near_Far", "Motion_Flag", "Down_Distance"])
+feats = tuple(f for f in PRE_SNAP_MODEL_FEATURES if f in data.columns)
+reg, reg_err = run_regression(data, feats)   # runs silently; only feeds the Accuracy Check
 T = {
-    "formation_alerts": build_run_pass_alerts(data, form_cols, **alert_args),
-    "composite_alerts": build_run_pass_alerts(data, comp_cols, **alert_args),
+    "formation_alerts": verify_alerts(build_run_pass_alerts(data, form_cols, **alert_args), data, form_cols, reg),
+    "composite_alerts": verify_alerts(build_run_pass_alerts(data, comp_cols, **alert_args), data, comp_cols, reg),
     "formation": tendency_table(data, ["Formation_Family"]),
     "formation_std": tendency_table(data, ["Formation_Standard"]),
     "formation_mod": tendency_table(data, ["Formation_Family", "Formation_Modifier"]),
@@ -121,8 +131,6 @@ explosives = data[data["Explosive_Flag"]][ex_cols]
 timeline = score_timeline(meta["score_rows"]) if meta.get("score_rows") is not None else pd.DataFrame()
 finals = final_scores(meta["score_rows"]) if meta.get("score_rows") is not None else pd.DataFrame()
 first_drive = data[data["First_Drive_Flag"]]
-feats = tuple(f for f in PRE_SNAP_MODEL_FEATURES if f in data.columns)
-reg, reg_err = run_regression(data, feats)
 
 with st.sidebar:
     st.divider()
@@ -138,6 +146,9 @@ with st.sidebar:
         ["Score state", "Rebuilt from TD/FG/PAT results; score is BEFORE the snap."],
         ["Alert rule", f"High ≥ {high:.0%}, Watch ≥ {watch:.0%}, min {int(min_plays)} plays, and ≥10 pts above team baseline."],
         ["Confidence", "High (15+ plays, 70%+), Usable (10+, 65%+), Low Volume (6+), No Clear Lean (6+ but under watch rate)."],
+        ["Accuracy Promise", "Every number is counted directly from the Hudl tags. Every alert is tested against games it was not built from; "
+                             "only tells that hold up earn ✓ Verified. Developing = passed one test. Film Only = confirm on film. "
+                             "Pending = needs 3+ games. Tendencies describe what an offense has done, not a promise of what it will call."],
     ], columns=["Item", "Detail"])
     sections = [
         ("Read Me", "FORMATIONIQ — SCOUTING WORKBOOK", readme),
@@ -159,18 +170,23 @@ with st.sidebar:
     ]
     if games >= MIN_FIRST_DRIVE_GAMES:
         sections.insert(6, ("First Drive", "FIRST DRIVE — BY PLAY IN DRIVE", tendency_table(first_drive, ["Play_In_Drive"])))
-    if reg and not reg_err:
-        sections.insert(-2, ("Regression", "PRE-SNAP TELLS RANKED (LOGISTIC REGRESSION)", reg["coefficients"]))
     st.download_button("Download Excel scouting workbook", data=build_workbook(sections),
                        file_name="FormationIQ_Scouting_Report.xlsx",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # ---------------------------------------------------------------- tabs
 tabs = st.tabs(["Executive Summary", "First Drive IQ", "Formation IQ", "Motion IQ", "Down & Distance",
-                "Situation IQ", "Explosive Plays", "Trick Plays", "Score Timeline", "Pivot Lab",
-                "Regression Validation", "Data Quality"])
+                "Situation IQ", "Explosive Plays", "Trick Plays", "Score Timeline", "Pivot Lab", "Data Quality"])
 
 with tabs[0]:
+    with st.container(border=True):
+        st.markdown(PROMISE)
+        if games < 3:
+            st.caption(f"{games} game(s) loaded. Alerts show **Pending** until 3+ games are uploaded and the held-out test can run.")
+        else:
+            n_ver = int((T["formation_alerts"].get("Accuracy_Check", pd.Series(dtype=str)) == "✓ Verified").sum()
+                        + (T["composite_alerts"].get("Accuracy_Check", pd.Series(dtype=str)) == "✓ Verified").sum())
+            st.caption(f"{n_ver} alert(s) Verified across {games} games.")
     c1, c2, c3 = st.columns(3)
     c1.metric("Run/Pass Snaps", f"{len(rp):,}")
     c2.metric("Pass Rate", f"{(rp['Run_Pass'] == 'Pass').mean():.0%}" if len(rp) else "—")
@@ -299,20 +315,6 @@ with tabs[9]:
                 {"Avg_Gain": "{:.1f}", "Success": "{:.0%}", "Explosive": "{:.0%}"}), width="stretch", hide_index=True)
 
 with tabs[10]:
-    if reg_err:
-        st.info(reg_err)
-    else:
-        v = reg["validation"]
-        st.write(f"**{v['Verdict']}**")
-        if "Held_Out_Accuracy" in v:
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Held-out accuracy", f"{v['Held_Out_Accuracy']:.0%}")
-            c2.metric("Always guess majority", f"{v['Always_Guess_Majority']:.0%}")
-            c3.metric("Held-out AUC", f"{v['Held_Out_AUC']:.2f}")
-        st.caption("Regression ranks and validates tells. Use the raw tendency tables for the call sheet.")
-        st.dataframe(reg["coefficients"].head(20), width="stretch", hide_index=True)
-
-with tabs[11]:
     show(quality)
     if meta["unmapped_columns"]:
         st.caption("Columns not used: " + ", ".join(meta["unmapped_columns"]))
