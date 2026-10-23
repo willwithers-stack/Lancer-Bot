@@ -150,6 +150,9 @@ FAKE_KICK_RESULTS = {"RUSH", "COMPLETE", "INCOMPLETE", "INTERCEPTION", "FIRST DO
 # (labeled "Inferred from play name" so nobody mistakes it for a hand tag).
 PASS_FAMILIES = ["Quick", "Dropback", "Play Action / Movement", "Screen"]
 PASS_TYPE_RULES = [
+    # Fakes first: "FAKE WR SCREEN DEEP PASS" is a shot off a screen look, not a screen.
+    ("PA Pocket", "Play Action / Movement", ["FAKE WR SCREEN", "FAKE SCREEN", "FAKE BUBBLE", "FAKE FLY", "FAKE JET",
+                                             "FAKE SWEEP", "FAKE HALO"]),
     ("Screen", "Screen", ["SCREEN", "BUBBLE", "TUNNEL", "SLIP", "JAILBREAK", "RB SCREEN", "WR SCREEN", "SCR"]),
     ("Naked", "Play Action / Movement", ["NAKED", "NAKED BOOT"]),
     ("Boot", "Play Action / Movement", ["BOOT", "BOOTLEG", "WAGGLE", "KEEP PASS"]),

@@ -148,6 +148,8 @@ def test_pass_type_classification():
     assert classify_pass_type("Quick Slants") == "Quick"
     assert classify_pass_type("Power") is None
     assert classify_pass_type("Fake Punt") is None                     # FAKE is not play action
+    assert classify_pass_type("FAKE WR SCREEN DEEP PASS") == "PA Pocket"
+    assert classify_pass_type("MOTION FAKE FLY PASS") == "PA Pocket"
     assert classify_pass_type("62 Hitch", series={"60": "Quick"}) is None  # whole word only
     assert classify_pass_type("60 Hitch", series={"60": "Quick"}) == "Quick"
     df = pd.DataFrame({"Run_Pass": ["Pass", "Pass", "Pass", "Run"], "Pass_Type_Raw": ["Dropback", None, None, None],
