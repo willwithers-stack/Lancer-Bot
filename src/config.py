@@ -159,14 +159,19 @@ PASS_TYPE_RULES = [
     ("Sprint / Rollout", "Play Action / Movement", ["SPRINT", "SPRINT OUT", "ROLLOUT", "ROLL OUT", "ROLL", "MOVE", "MOVEMENT", "SPRINTOUT"]),
     ("PA Pocket", "Play Action / Movement", ["PA", "PLAY ACTION", "PLAYACTION", "PLAY ACT", "P A"]),
     ("RPO", "Quick", ["RPO", "RPO PASS"]),
+    # LCC staff terms (per coach): these concepts are quick game. TB SWING is quick, plain SWING is dropback.
+    ("Quick", "Quick", ["SPACING", "TB RAIL", "RAIL", "TB SWING", "SEAM", "SEAM PASS", "HALO", "WR HALO", "FLY SWEEP"]),
     ("Quick", "Quick", ["QUICK", "QUICK GAME", "QK", "1 STEP", "3 STEP", "ONE STEP", "THREE STEP", "SNAP THROW", "RHYTHM"]),
-    ("Dropback", "Dropback", ["DROPBACK", "DROP BACK", "DROP", "DB", "5 STEP", "7 STEP", "FIVE STEP", "SEVEN STEP", "POCKET"]),
+    ("Dropback", "Dropback", ["MESH", "SWING",  # LCC staff terms (per coach)
+                              "DROPBACK", "DROP BACK", "DROP", "DB", "5 STEP", "7 STEP", "FIVE STEP", "SEVEN STEP", "POCKET"]),
 ]
 # Staff protection-series numbers that encode the pass type inside the play name.
 # Whole-word match on OFF PLAY, checked before the word rules above. Example:
 #   {"60": "Quick", "90": "Dropback", "70": "PA Pocket", "BOOT": "Boot"}
 # Values must be a Pass_Type from PASS_TYPE_RULES. Leave empty if the staff doesn't use them.
 PASS_PROTECTION_SERIES: dict[str, str] = {}
+# Play names that are always runs, even if PLAY TYPE was tagged Pass (whole-word match on OFF PLAY).
+RUN_CALL_OVERRIDES = ["TOSS CRACK"]
 PASS_TYPE_IMPLICATIONS = {
     "Quick": "Ball comes out fast: squat / press, get hands up in throwing lanes, rush lanes over depth",
     "Dropback": "QB sets and reads: rush has time to get home, pressure or sim pressure pays",

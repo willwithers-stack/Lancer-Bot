@@ -9,7 +9,7 @@ import re
 import pandas as pd
 
 from src.data_ingestion import normalize_columns, missing_required
-from src.config import NON_SNAP_RESULTS
+from src.config import NON_SNAP_RESULTS, RUN_CALL_OVERRIDES
 from src.scoring import add_score_state
 
 NON_SNAP_PLAY_TYPES = {"PUNT", "FG", "FIELD GOAL", "PAT", "XP", "KO", "KICKOFF",
@@ -128,6 +128,10 @@ def clean_hudl_export(sheets: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd
             data.get("Result", pd.Series("", index=data.index)),
         )
     ]
+    # Staff-confirmed run calls win over a Pass tag (e.g. TOSS CRACK).
+    call_tok = data.get("Off_Play", pd.Series("", index=data.index)).map(lambda v: " " + re.sub(r"[^A-Z0-9]+", " ", _text(v)) + " ")
+    forced_run = call_tok.map(lambda t: any(f" {c} " in t for c in RUN_CALL_OVERRIDES))
+    data.loc[forced_run, "Run_Pass"] = "Run"
     # A hand-tagged PASS TYPE means the snap was a pass, even if PLAY TYPE was left blank.
     if "Pass_Type_Raw" in data.columns:
         has_pt = data["Pass_Type_Raw"].map(_text).ne("")
