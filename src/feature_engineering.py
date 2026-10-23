@@ -6,6 +6,7 @@ import pandas as pd
 
 from src.config import EXPLOSIVE_GAIN_YARDS
 from src.formation_mapping import apply_formation_mapping
+from src.pass_types import add_pass_types
 
 
 def _col(df: pd.DataFrame, name: str, default="") -> pd.Series:
@@ -138,4 +139,6 @@ def add_analysis_features(df: pd.DataFrame, family_rules=None) -> pd.DataFrame:
     data["Gain"] = _num(data, "Gain")
     data["Success_Flag"] = [success_flag(d, t, g) for d, t, g in zip(data["Down"], data["Distance"], data["Gain"])]
     data["Explosive_Flag"] = data["Gain"] > EXPLOSIVE_GAIN_YARDS
+    if "Run_Pass" in data:
+        data = add_pass_types(data)   # Quick / Dropback / Play Action-Movement / Screen
     return data

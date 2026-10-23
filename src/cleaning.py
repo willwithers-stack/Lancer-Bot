@@ -128,6 +128,10 @@ def clean_hudl_export(sheets: dict[str, pd.DataFrame]) -> tuple[pd.DataFrame, pd
             data.get("Result", pd.Series("", index=data.index)),
         )
     ]
+    # A hand-tagged PASS TYPE means the snap was a pass, even if PLAY TYPE was left blank.
+    if "Pass_Type_Raw" in data.columns:
+        has_pt = data["Pass_Type_Raw"].map(_text).ne("")
+        data.loc[has_pt & data["Run_Pass"].eq("Unknown"), "Run_Pass"] = "Pass"
     result_text = data.get("Result", pd.Series("", index=data.index)).map(_text)
     data["Penalty_Flag"] = result_text.str.contains(PENALTY_WORDS, regex=True)
 

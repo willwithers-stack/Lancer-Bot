@@ -34,6 +34,7 @@ PRE_SNAP_MODEL_FEATURES = [
 POST_SNAP_COLUMNS = {
     "Gain", "Result", "Success_Flag", "Explosive_Flag", "Play_Direction",
     "Concept_Family", "Run_Family", "Pass_Family",
+    "Pass_Type", "Pass_Type_Raw", "Pass_Type_Source", "Launch_Side", "Protection",
 }
 
 # Hudl header -> FormationIQ column. Keys are compared after upper-casing and
@@ -62,6 +63,11 @@ HUDL_COLUMN_ALIASES = {
     "OURSCORE": "Team_Score", "OPPSCORE": "Opp_Score", "THEIRSCORE": "Opp_Score",
     "GAME": "Game_ID", "GAMEID": "Game_ID", "OPPONENT": "Game_ID",
     "CONCEPT": "Concept_Family",
+    # Pass type (Quick / Dropback / Play Action-Movement / Screen). Add a PASS TYPE column in Hudl.
+    "PASSTYPE": "Pass_Type_Raw", "PASSFAMILY": "Pass_Type_Raw", "DROP": "Pass_Type_Raw",
+    "DROPTYPE": "Pass_Type_Raw", "QBDROP": "Pass_Type_Raw", "PASSSTYLE": "Pass_Type_Raw",
+    "LAUNCH": "Launch_Side", "LAUNCHPOINT": "Launch_Side", "LAUNCHSIDE": "Launch_Side",
+    "PROTECTION": "Protection", "PROT": "Protection", "PASSPRO": "Protection",
 }
 REQUIRED_COLUMNS = ["Down", "Distance", "Yard_Line", "Formation_Raw"]
 
@@ -135,3 +141,32 @@ TRICK_PLAY_PATTERNS = [
 # Kicking plays that ended as a run or pass = fake, even if the tagger never named it.
 FAKE_KICK_PLAY_TYPES = {"PUNT", "FG", "FIELD GOAL", "PAT"}
 FAKE_KICK_RESULTS = {"RUSH", "COMPLETE", "INCOMPLETE", "INTERCEPTION", "FIRST DOWN", "1ST DN", "TD", "TOUCHDOWN", "SACK"}
+
+# ---------------------------------------------------------------- pass type
+# Two levels: Pass_Family (what coaches see) and Pass_Type (the detail).
+# Rules are (Pass_Type, Pass_Family, [whole-word patterns]). First match wins, so the
+# specific ones go first (NAKED before BOOT, SCREEN before everything).
+# Matched against the PASS TYPE column when it is tagged; otherwise against OFF PLAY
+# (labeled "Inferred from play name" so nobody mistakes it for a hand tag).
+PASS_FAMILIES = ["Quick", "Dropback", "Play Action / Movement", "Screen"]
+PASS_TYPE_RULES = [
+    ("Screen", "Screen", ["SCREEN", "BUBBLE", "TUNNEL", "SLIP", "JAILBREAK", "RB SCREEN", "WR SCREEN", "SCR"]),
+    ("Naked", "Play Action / Movement", ["NAKED", "NAKED BOOT"]),
+    ("Boot", "Play Action / Movement", ["BOOT", "BOOTLEG", "WAGGLE", "KEEP PASS"]),
+    ("Sprint / Rollout", "Play Action / Movement", ["SPRINT", "SPRINT OUT", "ROLLOUT", "ROLL OUT", "ROLL", "MOVE", "MOVEMENT", "SPRINTOUT"]),
+    ("PA Pocket", "Play Action / Movement", ["PA", "PLAY ACTION", "PLAYACTION", "PLAY ACT", "P A"]),
+    ("RPO", "Quick", ["RPO", "RPO PASS"]),
+    ("Quick", "Quick", ["QUICK", "QUICK GAME", "QK", "1 STEP", "3 STEP", "ONE STEP", "THREE STEP", "SNAP THROW", "RHYTHM"]),
+    ("Dropback", "Dropback", ["DROPBACK", "DROP BACK", "DROP", "DB", "5 STEP", "7 STEP", "FIVE STEP", "SEVEN STEP", "POCKET"]),
+]
+# Staff protection-series numbers that encode the pass type inside the play name.
+# Whole-word match on OFF PLAY, checked before the word rules above. Example:
+#   {"60": "Quick", "90": "Dropback", "70": "PA Pocket", "BOOT": "Boot"}
+# Values must be a Pass_Type from PASS_TYPE_RULES. Leave empty if the staff doesn't use them.
+PASS_PROTECTION_SERIES: dict[str, str] = {}
+PASS_TYPE_IMPLICATIONS = {
+    "Quick": "Ball comes out fast: squat / press, get hands up in throwing lanes, rush lanes over depth",
+    "Dropback": "QB sets and reads: rush has time to get home, pressure or sim pressure pays",
+    "Play Action / Movement": "Run fake or moved launch point: second-level eye discipline, set the edge vs boot",
+    "Screen": "Screen alert: disciplined rush, DL peel, perimeter defenders beat blocks",
+}

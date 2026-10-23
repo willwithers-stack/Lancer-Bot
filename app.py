@@ -16,12 +16,20 @@ from src.trick_plays import build_trick_play_inventory
 from src.scoring import score_timeline, final_scores
 from src.report_builder import build_workbook
 from src.verification import verify_alerts
+from src.pass_types import (build_pass_type_alerts, pass_type_table, pass_type_results,
+                            play_action_after_run, launch_vs_strength, pass_type_quality)
 
 st.set_page_config(page_title="FormationIQ", page_icon="🏈", layout="wide")
 st.title("FormationIQ")
 st.caption("Upload Hudl game files (one per game). Tendencies use the team tagged ODK = O, run/pass snaps only.")
 
-PCT_COLS = ["Run_Rate", "Pass_Rate", "Rate", "Team_Baseline", "Lift"]
+PCT_COLS = ["Run_Rate", "Pass_Rate", "Rate", "Team_Baseline", "Lift", "Share", "Comp_Pct", "Success", "Explosive",
+            "PA_Movement_Pct", "Quick_Pct", "Dropback_Pct", "Screen_Pct",
+            "Quick %", "Dropback %", "Play Action / Movement %", "Screen %"]
+PT_COLS = ["Passes", "Games", "Quick %", "Dropback %", "Play Action / Movement %", "Screen %",
+           "Top_Type", "Rate", "Lift", "Confidence"]
+PT_ALERT_COLS = ["Passes", "Games", "Top_Type", "Rate", "Lift", "Confidence", "Accuracy_Check", "Held_Up",
+                 "Alert_Level", "Coaching_Implication"]
 CORE_COLS = ["Plays", "Games", "Run", "Pass", "Tendency", "Rate", "Lift", "Confidence"]
 ALERT_COLS = CORE_COLS + ["Accuracy_Check", "Held_Up", "Alert_Level", "Coaching_Implication"]
 PROMISE = (
@@ -46,12 +54,15 @@ with st.sidebar:
         watch = high
 
 
-def show(df: pd.DataFrame, group_cols=None, alert=False, empty_msg="No results clear the current thresholds."):
+def show(df: pd.DataFrame, group_cols=None, alert=False, empty_msg="No results clear the current thresholds.", pt=False):
     if df is None or df.empty:
         st.info(empty_msg)
         return
     if group_cols is not None and not show_all:
-        keep = group_cols + (ALERT_COLS if alert else CORE_COLS)
+        if pt:
+            keep = group_cols + (PT_ALERT_COLS if alert else PT_COLS)
+        else:
+            keep = group_cols + (ALERT_COLS if alert else CORE_COLS)
         df = df[[c for c in keep if c in df.columns]]
     fmt = {c: "{:.0%}" for c in PCT_COLS if c in df.columns}
     st.dataframe(df.style.format(fmt), width="stretch", hide_index=True)
@@ -124,9 +135,30 @@ T = {
 }
 if not T["dd"].empty:
     T["dd"] = T["dd"].assign(_o=T["dd"]["Down_Distance"].map(lambda v: DD_ORDER.index(v) if v in DD_ORDER else 99)).sort_values("_o").drop(columns="_o")
+# Pass Type IQ: Quick / Dropback / Play Action-Movement / Screen, among classified passes.
+pt_args = dict(high_threshold=high, watch_threshold=watch, min_plays=int(min_plays))
+PT = {
+    "alerts_form": build_pass_type_alerts(data, form_cols or ["Formation_Family"], **pt_args),
+    "alerts_dd": build_pass_type_alerts(data, ["Down_Distance"], **pt_args),
+    "alerts_comp": build_pass_type_alerts(data, tagged(["Formation_Family", "Down_Distance"]) or ["Formation_Family"], **pt_args),
+    "formation": pass_type_table(data, ["Formation_Family"]),
+    "dd": pass_type_table(data, ["Down_Distance"]),
+    "form_dd": pass_type_table(data, ["Formation_Family", "Down_Distance"]),
+    "qb": pass_type_table(data, ["QB_Alignment"]),
+    "field_zone": pass_type_table(data, ["Field_Zone"]),
+    "hash": pass_type_table(data, ["Hash"]),
+    "score": pass_type_table(data, ["Score_State"]),
+    "detail": pass_type_table(data, ["Formation_Family"], level="Pass_Type"),
+    "results": pass_type_results(data),
+    "results_detail": pass_type_results(data, level="Pass_Type"),
+    "pa_after_run": play_action_after_run(data),
+    "launch": launch_vs_strength(data),
+}
+quality = pd.concat([quality, pd.DataFrame(pass_type_quality(data), columns=quality.columns)], ignore_index=True)
+classified = data["Pass_Type_Source"].isin(["Tagged", "Inferred from play name"]) if "Pass_Type_Source" in data else pd.Series(False, index=data.index)
 tricks = build_trick_play_inventory(meta["trick_source"])
 ex_cols = [c for c in ["Game_ID", "Play_Number", "Quarter", "Down", "Distance", "Yard_Line", "Hash", "Formation_Raw",
-                       "Formation_Family", "Motion", "Run_Pass", "Off_Play", "Play_Direction", "Gain", "Result"] if c in data.columns]
+                       "Formation_Family", "Motion", "Run_Pass", "Pass_Type", "Off_Play", "Play_Direction", "Gain", "Result"] if c in data.columns]
 explosives = data[data["Explosive_Flag"]][ex_cols]
 timeline = score_timeline(meta["score_rows"]) if meta.get("score_rows") is not None else pd.DataFrame()
 finals = final_scores(meta["score_rows"]) if meta.get("score_rows") is not None else pd.DataFrame()
@@ -146,6 +178,9 @@ with st.sidebar:
         ["Score state", "Rebuilt from TD/FG/PAT results; score is BEFORE the snap."],
         ["Alert rule", f"High ≥ {high:.0%}, Watch ≥ {watch:.0%}, min {int(min_plays)} plays, and ≥10 pts above team baseline."],
         ["Confidence", "High (15+ plays, 70%+), Usable (10+, 65%+), Low Volume (6+), No Clear Lean (6+ but under watch rate)."],
+        ["Pass Type", "Quick / Dropback / Play Action-Movement / Screen, among passes only. From the PASS TYPE column when tagged; "
+                      "otherwise inferred from the play name (marked in Pass_Type_Source). Pass-type alerts are checked game by game "
+                      "and top out at Developing; no regression model sits behind them yet."],
         ["Accuracy Promise", "Every number is counted directly from the Hudl tags. Every alert is tested against games it was not built from; "
                              "only tells that hold up earn ✓ Verified. Developing = passed one test. Film Only = confirm on film. "
                              "Pending = needs 3+ games. Tendencies describe what an offense has done, not a promise of what it will call."],
@@ -159,6 +194,13 @@ with st.sidebar:
         ("Motion IQ", "MOTION BY FORMATION", T["motion_form"]),
         ("Down & Distance", "DOWN & DISTANCE TENDENCIES", T["dd"]),
         ("Score + D&D", "SCORE STATE + DOWN & DISTANCE", T["score_dd"]),
+        ("Pass Type Alerts", "PASS TYPE ALERTS (FORMATION, D&D, FORMATION + D&D)",
+         pd.concat([PT["alerts_form"], PT["alerts_dd"], PT["alerts_comp"]], ignore_index=True)),
+        ("Pass Type IQ", "PASS TYPE BY FORMATION", PT["formation"]),
+        ("Pass Type D&D", "PASS TYPE BY DOWN & DISTANCE", PT["dd"]),
+        ("Pass Type Detail", "PASS TYPE DETAIL (BOOT, NAKED, RPO...) BY FORMATION", PT["detail"]),
+        ("Pass Type Results", "RESULTS BY PASS TYPE", pd.concat([PT["results"], PT["results_detail"]], ignore_index=True)),
+        ("PA After Run", "PLAY ACTION / MOVEMENT BY PREVIOUS SNAP", PT["pa_after_run"]),
         ("Field Zone", "FIELD ZONE TENDENCIES", T["field_zone"]),
         ("Hash", "HASH TENDENCIES", T["hash"]),
         ("Field-Boundary", "STRENGTH TO FIELD / BOUNDARY", T["boundary"]),
@@ -176,7 +218,8 @@ with st.sidebar:
 
 # ---------------------------------------------------------------- tabs
 tabs = st.tabs(["Executive Summary", "First Drive IQ", "Formation IQ", "Motion IQ", "Down & Distance",
-                "Situation IQ", "Explosive Plays", "Trick Plays", "Score Timeline", "Pivot Lab", "Data Quality"])
+                "Situation IQ", "Explosive Plays", "Trick Plays", "Score Timeline", "Pivot Lab", "Data Quality",
+                "Pass Type IQ"])
 
 with tabs[0]:
     with st.container(border=True):
@@ -300,10 +343,14 @@ with tabs[9]:
                               "Down_Distance", "Down_Bucket", "Distance_Bucket", "Field_Zone", "Hash", "Strength",
                               "Boundary_Field", "Score_State", "Quarter", "Game_ID", "Off_Play"] if c in data.columns]
     g = st.multiselect("Group by (1-3)", group_opts, default=["Formation_Family"], max_selections=3)
-    metric = st.selectbox("Metric", ["Run/Pass Tendency", "Avg Gain", "Success %", "Explosive %", "Play Count"])
+    metric = st.selectbox("Metric", ["Run/Pass Tendency", "Pass Type Mix", "Pass Type Detail", "Avg Gain", "Success %",
+                                     "Explosive %", "Play Count"])
     if g:
         if metric == "Run/Pass Tendency":
             show(tendency_table(data, g), g)
+        elif metric.startswith("Pass Type"):
+            lvl = "Pass_Family" if metric == "Pass Type Mix" else "Pass_Type"
+            show(pass_type_table(data, g, level=lvl), g, pt=(lvl == "Pass_Family"), empty_msg="No classified passes.")
         else:
             src = rp.copy()
             for c in g:
@@ -319,3 +366,61 @@ with tabs[10]:
     if meta["unmapped_columns"]:
         st.caption("Columns not used: " + ", ".join(meta["unmapped_columns"]))
     st.download_button("Download clean play table (CSV)", data.to_csv(index=False), "formationiq_clean.csv")
+
+with tabs[11]:
+    n_pass = int(data["Run_Pass"].eq("Pass").sum())
+    n_cls = int(classified.sum())
+    n_tag = int(data.get("Pass_Type_Source", pd.Series(dtype=str)).eq("Tagged").sum())
+    st.caption("Quick (1/3-step, rhythm, RPO throws) · Dropback (QB sets and reads) · Play Action / Movement "
+               "(PA, boot, naked, sprint) · Screen. Pass type is what happened, so it is only grouped by pre-snap looks.")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Pass snaps", n_pass)
+    c2.metric("Pass type known", f"{n_cls} ({n_cls / n_pass:.0%})" if n_pass else "—")
+    c3.metric("Hand-tagged", n_tag)
+    if n_cls == 0:
+        st.info("No pass types found. Add a PASS TYPE column in Hudl (Quick, Dropback, PA, Boot, Naked, Sprint, Screen), "
+                "or add the staff's protection numbers to PASS_PROTECTION_SERIES in config.py.")
+    else:
+        if n_cls > n_tag:
+            st.caption(f"{n_cls - n_tag} pass type(s) inferred from the play name. Confirm on film or tag PASS TYPE.")
+        st.subheader("Team Pass-Type Mix")
+        res = PT["results"]
+        st.dataframe(res.style.format({"Share": "{:.0%}", "Comp_Pct": "{:.0%}", "Avg_Gain": "{:.1f}",
+                                       "Success": "{:.0%}", "Explosive": "{:.0%}"}, na_rep="—"),
+                     width="stretch", hide_index=True)
+        st.subheader("Pass Type Alerts")
+        st.caption("Same rules as run/pass alerts: threshold, minimum passes, and 10+ pts above the team's own mix. "
+                   "Checked game by game; tops out at Developing.")
+        show(PT["alerts_form"], form_cols or ["Formation_Family"], alert=True, pt=True)
+        show(PT["alerts_dd"], ["Down_Distance"], alert=True, pt=True, empty_msg="No down & distance pass-type alerts.")
+        comp_pt = tagged(["Formation_Family", "Down_Distance"]) or ["Formation_Family"]
+        show(PT["alerts_comp"], comp_pt, alert=True, pt=True, empty_msg="No formation + down & distance pass-type alerts.")
+        for title, key, cols in [("By Formation Family", "formation", ["Formation_Family"]),
+                                 ("By Down & Distance", "dd", ["Down_Distance"]),
+                                 ("Formation + Down & Distance", "form_dd", ["Formation_Family", "Down_Distance"]),
+                                 ("By QB Alignment", "qb", ["QB_Alignment"]),
+                                 ("By Field Zone", "field_zone", ["Field_Zone"]),
+                                 ("By Hash", "hash", ["Hash"]),
+                                 ("By Score State", "score", ["Score_State"])]:
+            st.subheader(title)
+            show(PT[key], cols, pt=True)
+        st.subheader("Play Action / Movement After the Run")
+        st.caption("Pass-type mix by what happened on the previous snap of the same drive.")
+        pa = PT["pa_after_run"]
+        if pa.empty:
+            st.info("Not enough classified passes.")
+        else:
+            st.dataframe(pa.style.format({c: "{:.0%}" for c in pa.columns if c.endswith("_Pct")}),
+                         width="stretch", hide_index=True)
+        st.subheader("Detail: Boot, Naked, Sprint, RPO...")
+        show(PT["detail"], ["Formation_Family"], pt=True)
+        st.dataframe(PT["results_detail"].style.format({"Share": "{:.0%}", "Comp_Pct": "{:.0%}", "Avg_Gain": "{:.1f}",
+                                                         "Success": "{:.0%}", "Explosive": "{:.0%}"}, na_rep="—"),
+                     width="stretch", hide_index=True)
+        if not PT["launch"].empty:
+            st.subheader("Launch Point vs Strength (Boot / Naked / Sprint)")
+            st.dataframe(PT["launch"], width="stretch", hide_index=True)
+        st.subheader("Every Classified Pass")
+        pcols = [c for c in ["Game_ID", "Play_Number", "Quarter", "Down", "Distance", "Yard_Line", "Hash", "Formation_Raw",
+                             "Pass_Family", "Pass_Type", "Pass_Type_Source", "Off_Play", "Gain", "Result"] if c in data]
+        st.dataframe(data[classified][pcols], width="stretch", hide_index=True)

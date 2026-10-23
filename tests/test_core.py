@@ -137,3 +137,47 @@ def test_accuracy_check_pending_under_three_games():
     v = verify_alerts(a, df, ["Formation_Family"], None)
     assert set(v["Accuracy_Check"]) <= {PENDING, "Film Only"}
     assert "Held_Up" in v.columns
+
+
+def test_pass_type_classification():
+    from src.pass_types import classify_pass_type, add_pass_types
+    assert classify_pass_type("Naked Boot Rt") == "Naked"
+    assert classify_pass_type("Boot Lt Flood") == "Boot"
+    assert classify_pass_type("PA Post") == "PA Pocket"
+    assert classify_pass_type("Bubble Rt") == "Screen"
+    assert classify_pass_type("Quick Slants") == "Quick"
+    assert classify_pass_type("Power") is None
+    assert classify_pass_type("Fake Punt") is None                     # FAKE is not play action
+    assert classify_pass_type("62 Hitch", series={"60": "Quick"}) is None  # whole word only
+    assert classify_pass_type("60 Hitch", series={"60": "Quick"}) == "Quick"
+    df = pd.DataFrame({"Run_Pass": ["Pass", "Pass", "Pass", "Run"], "Pass_Type_Raw": ["Dropback", None, None, None],
+                       "Off_Play": ["Boot Lt", "Sprint Out", "Y Cross", "Power"]})
+    out = add_pass_types(df)
+    assert list(out["Pass_Family"].fillna("-")) == ["Dropback", "Play Action / Movement", "Not Tagged", "-"]
+    assert list(out["Pass_Type_Source"].fillna("-")) == ["Tagged", "Inferred from play name", "Not Tagged", "-"]
+
+
+def test_pass_type_tag_makes_snap_a_pass():
+    raw = pd.DataFrame({"DN": [1, 2], "DIST": [10, 6], "YARD LN": [-30, 40], "OFF FORM": ["Trips Rt", "Doubles"],
+                        "PLAY TYPE": [None, "Run"], "PASS TYPE": ["Quick", None]})
+    clean, _, _ = clean_hudl_export({"CSV": raw})
+    out = add_analysis_features(clean)
+    assert list(out["Run_Pass"]) == ["Pass", "Run"]
+    assert out["Pass_Family"].iloc[0] == "Quick"
+
+
+def test_pass_type_alerts_need_lift_and_block_post_snap():
+    from src.pass_types import build_pass_type_alerts, pass_type_table
+    n = 12
+    df = pd.DataFrame({"Run_Pass": ["Pass"] * (2 * n), "Game_ID": ["G1", "G2", "G3"] * 8,
+                       "Formation_Family": ["TRIPS"] * n + ["DUBS"] * n,
+                       "Pass_Type": ["Quick"] * 11 + ["Dropback"] + ["Dropback"] * 10 + ["Quick"] * 2})
+    from src.pass_types import TYPE_TO_FAMILY
+    df["Pass_Family"] = df["Pass_Type"].map(TYPE_TO_FAMILY)
+    a = build_pass_type_alerts(df, ["Formation_Family"])
+    assert set(a["Top_Type"]) == {"Quick", "Dropback"}
+    trips = a[a["Formation_Family"] == "TRIPS"].iloc[0]
+    assert trips["Passes"] == 12 and abs(trips["Rate"] - 11 / 12) < 1e-9
+    assert trips["Accuracy_Check"] in {"Developing", "Film Only"}       # never Verified without a model
+    with pytest.raises(ValueError):
+        pass_type_table(df, ["Pass_Type"])
