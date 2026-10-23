@@ -1,7 +1,7 @@
 """Pass Type IQ: Quick vs Dropback vs Play Action / Movement vs Screen.
 
 Two levels:
-  Pass_Family -> Quick | Dropback | Play Action / Movement | Screen  (what coaches see)
+  Pass_Family -> Quick | Dropback | Play Action / Movement | Screen | Trick Play  (what coaches see)
   Pass_Type   -> Quick, RPO, Dropback, PA Pocket, Boot, Naked, Sprint / Rollout, Screen
 
 Pass type is what HAPPENED after the snap, so it is a target (like Run/Pass), never a
@@ -19,12 +19,14 @@ import re
 import pandas as pd
 
 from src.alert_engine import confidence_label, _filters_text
+from src.trick_plays import classify_trick
 from src.config import (PASS_TYPE_RULES, PASS_PROTECTION_SERIES, PASS_FAMILIES, POST_SNAP_COLUMNS,
                         PASS_TYPE_IMPLICATIONS, ALERT_THRESHOLD_HIGH, ALERT_THRESHOLD_WATCH,
                         MIN_ALERT_PLAYS, MIN_LIFT_OVER_BASELINE, MIN_REGRESSION_GAMES)
 
 TAGGED, INFERRED, NOT_TAGGED = "Tagged", "Inferred from play name", "Not Tagged"
-TYPE_TO_FAMILY = {t: f for t, f, _ in PASS_TYPE_RULES}
+TRICK = "Trick Play"
+TYPE_TO_FAMILY = {t: f for t, f, _ in PASS_TYPE_RULES} | {TRICK: TRICK}
 FAMILY_NAMES = {f.upper(): f for f in PASS_FAMILIES} | {"PA": "Play Action / Movement",
                                                          "MOVEMENT": "Play Action / Movement",
                                                          "PLAY ACTION": "Play Action / Movement"}
@@ -75,6 +77,8 @@ def add_pass_types(df: pd.DataFrame) -> pd.DataFrame:
             types.append(pd.NA)
             sources.append(pd.NA)
             continue
+        if classify_trick(c) or classify_trick(r) or _tok(r).strip() in {"TRICK", "TRICK PLAY", "GADGET"}:
+            types.append(TRICK); sources.append(TAGGED if _tok(r).strip() else INFERRED); continue
         tagged = _from_tag(r)
         if tagged:
             types.append(tagged); sources.append(TAGGED); continue
@@ -109,7 +113,7 @@ def pass_type_table(df: pd.DataFrame, group_columns: list[str], level: str = "Pa
     for c in group_columns:
         src[c] = src[c].astype("string").fillna("Unknown")
     cats = [c for c in (PASS_FAMILIES if level == "Pass_Family" else
-                        [t for t, _, _ in PASS_TYPE_RULES]) if c in set(src[level])]
+                        list(dict.fromkeys([t for t, _, _ in PASS_TYPE_RULES] + [TRICK]))) if c in set(src[level])]
     counts = pd.crosstab([src[c] for c in group_columns], src[level]).reindex(columns=cats, fill_value=0)
     out = counts.reset_index()
     out.columns.name = None
@@ -235,6 +239,7 @@ def play_action_after_run(df: pd.DataFrame) -> pd.DataFrame:
         "Quick_Pct": g["Pass_Family"].apply(lambda s: (s == "Quick").mean()),
         "Dropback_Pct": g["Pass_Family"].apply(lambda s: (s == "Dropback").mean()),
         "Screen_Pct": g["Pass_Family"].apply(lambda s: (s == "Screen").mean()),
+        "Trick_Pct": g["Pass_Family"].apply(lambda s: (s == TRICK).mean()),
     }).reset_index()
     order = ["After successful run", "After unsuccessful run", "After run (no gain tagged)", "After pass", "First play of drive"]
     return out.assign(_o=out["Previous_Snap"].map(order.index)).sort_values("_o").drop(columns="_o").reset_index(drop=True)

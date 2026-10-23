@@ -24,9 +24,9 @@ st.title("FormationIQ")
 st.caption("Upload Hudl game files (one per game). Tendencies use the team tagged ODK = O, run/pass snaps only.")
 
 PCT_COLS = ["Run_Rate", "Pass_Rate", "Rate", "Team_Baseline", "Lift", "Share", "Comp_Pct", "Success", "Explosive",
-            "PA_Movement_Pct", "Quick_Pct", "Dropback_Pct", "Screen_Pct",
-            "Quick %", "Dropback %", "Play Action / Movement %", "Screen %"]
-PT_COLS = ["Passes", "Games", "Quick %", "Dropback %", "Play Action / Movement %", "Screen %",
+            "PA_Movement_Pct", "Quick_Pct", "Dropback_Pct", "Screen_Pct", "Trick_Pct",
+            "Quick %", "Dropback %", "Play Action / Movement %", "Screen %", "Trick Play %"]
+PT_COLS = ["Passes", "Games", "Quick %", "Dropback %", "Play Action / Movement %", "Screen %", "Trick Play %",
            "Top_Type", "Rate", "Lift", "Confidence"]
 PT_ALERT_COLS = ["Passes", "Games", "Top_Type", "Rate", "Lift", "Confidence", "Accuracy_Check", "Held_Up",
                  "Alert_Level", "Coaching_Implication"]
@@ -372,7 +372,7 @@ with tabs[11]:
     n_cls = int(classified.sum())
     n_tag = int(data.get("Pass_Type_Source", pd.Series(dtype=str)).eq("Tagged").sum())
     st.caption("Quick (1/3-step, rhythm, RPO throws) · Dropback (QB sets and reads) · Play Action / Movement "
-               "(PA, boot, naked, sprint) · Screen. Pass type is what happened, so it is only grouped by pre-snap looks.")
+               "(PA, boot, naked, sprint) · Screen · Trick Play (double pass, reverse pass, flea flicker...). Pass type is what happened, so it is only grouped by pre-snap looks.")
     c1, c2, c3 = st.columns(3)
     c1.metric("Pass snaps", n_pass)
     c2.metric("Pass type known", f"{n_cls} ({n_cls / n_pass:.0%})" if n_pass else "—")

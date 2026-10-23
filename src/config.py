@@ -148,7 +148,9 @@ FAKE_KICK_RESULTS = {"RUSH", "COMPLETE", "INCOMPLETE", "INTERCEPTION", "FIRST DO
 # specific ones go first (NAKED before BOOT, SCREEN before everything).
 # Matched against the PASS TYPE column when it is tagged; otherwise against OFF PLAY
 # (labeled "Inferred from play name" so nobody mistakes it for a hand tag).
-PASS_FAMILIES = ["Quick", "Dropback", "Play Action / Movement", "Screen"]
+PASS_FAMILIES = ["Quick", "Dropback", "Play Action / Movement", "Screen", "Trick Play"]
+# Trick plays (double pass, reverse pass, flea flicker...) get their own bucket, found with
+# TRICK_PLAY_PATTERNS (same list as the Trick Play Inventory). They are checked before every rule below.
 PASS_TYPE_RULES = [
     # Fakes first: "FAKE WR SCREEN DEEP PASS" is a shot off a screen look, not a screen.
     ("PA Pocket", "Play Action / Movement", ["FAKE WR SCREEN", "FAKE SCREEN", "FAKE BUBBLE", "FAKE FLY", "FAKE JET",
@@ -177,4 +179,5 @@ PASS_TYPE_IMPLICATIONS = {
     "Dropback": "QB sets and reads: rush has time to get home, pressure or sim pressure pays",
     "Play Action / Movement": "Run fake or moved launch point: second-level eye discipline, set the edge vs boot",
     "Screen": "Screen alert: disciplined rush, DL peel, perimeter defenders beat blocks",
+    "Trick Play": "Gadget look: eyes on your keys, plaster receivers, someone stays home on the throwback",
 }

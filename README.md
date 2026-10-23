@@ -9,6 +9,7 @@ Every pass is labeled at two levels:
 | Dropback | Dropback | QB sets in the pocket and reads it out (5/7-step, gun dropback) |
 | Play Action / Movement | PA Pocket, Boot, Naked, Sprint / Rollout | Run fake or a launch point outside the pocket |
 | Screen | Screen | Bubble, tunnel, slip, RB/WR screens |
+| Trick Play | Trick Play | Double pass, reverse pass, flea flicker, HB/WR pass (same list as the Trick Play Inventory) |
 
 **Hudl setup:** add a `PASS TYPE` column (also read as `DROP`, `PASS FAMILY`). Values like
 `Quick`, `Dropback`, `PA`, `Boot`, `Naked`, `Sprint`, `Screen`, `RPO` all work. Optional:

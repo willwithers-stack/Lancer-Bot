@@ -154,7 +154,9 @@ def test_pass_type_classification():
     assert classify_pass_type("TB SWING") == "Quick" and classify_pass_type("SWING") == "Dropback"
     assert classify_pass_type("MOTION SPACING") == "Quick" and classify_pass_type("MESH") == "Dropback"
     assert classify_pass_type("MOTION FLY SWEEP") == "Quick"
-    assert derive_run_pass("Pass", "TOSS CRACK", "Rush") == "Pass"   # override happens in cleaning, not here
+    assert derive_run_pass("Pass", "TOSS CRACK", "Rush") == "Pass"
+    tp = add_pass_types(pd.DataFrame({"Run_Pass": ["Pass"] * 3, "Off_Play": ["DOUBLE PASS", "TOSS REVERSE PASS", "FLEA FLICKER"]}))
+    assert set(tp["Pass_Family"]) == {"Trick Play"}   # override happens in cleaning, not here
     assert classify_pass_type("62 Hitch", series={"60": "Quick"}) is None  # whole word only
     assert classify_pass_type("60 Hitch", series={"60": "Quick"}) == "Quick"
     df = pd.DataFrame({"Run_Pass": ["Pass", "Pass", "Pass", "Run"], "Pass_Type_Raw": ["Dropback", None, None, None],
