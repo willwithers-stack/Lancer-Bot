@@ -28,3 +28,19 @@ held-out model behind them yet, so none are stamped Verified.
 The tab also shows results by pass type (comp %, yards, success, explosive, sacks, INTs),
 the play action / movement rate after a successful vs unsuccessful run, and boot launch side
 vs strength.
+
+## Upload Check
+
+Runs on every upload before any tendency math (`src/duplicate_check.py`).
+
+| Problem | What it looks like | What the app does |
+|---|---|---|
+| Duplicate game | Same snaps uploaded twice, even under a different file name or with renumbered PLAY # | Keeps the first upload, drops the copy, and warns that one of the file names is likely the wrong export |
+| Possible duplicate | 50%+ of one game's snaps match another upload | Keeps both and warns so the coach can check the files |
+| Stacked games | PLAY # restarts at 1 inside one file (two games exported together) | Splits the file into `(game 1)`, `(game 2)`, ... and warns |
+| Same file name twice | Two uploads named `vs LCC.xlsx` | Keeps both as `vs LCC` and `vs LCC (2)` so the duplicate check can compare them |
+
+Snaps are matched on play content (ODK, quarter, down, distance, yard line, hash, formation,
+play type, play name, direction, gain, result), not PLAY #. Hudl padding rows that carry only a
+PLAY # are ignored. Findings show as a warning under the upload, in the Data Quality tab, and on
+the Excel Read Me sheet.

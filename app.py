@@ -7,6 +7,7 @@ import streamlit as st
 from src.config import (ALERT_THRESHOLD_HIGH, ALERT_THRESHOLD_WATCH, MIN_ALERT_PLAYS,
                         MIN_FIRST_DRIVE_GAMES, PRE_SNAP_MODEL_FEATURES, OPPONENT_PROFILES)
 from src.data_ingestion import read_uploads
+from src.duplicate_check import check_uploads
 from src.cleaning import clean_hudl_export
 from src.feature_engineering import add_analysis_features
 from src.formation_mapping import unmapped_formations
@@ -75,7 +76,9 @@ def process(files: tuple, profile: str):
         b = io.BytesIO(raw)
         b.name = name
         bufs.append(b)
-    clean, quality, meta = clean_hudl_export(read_uploads(bufs))
+    sheets, findings = check_uploads(read_uploads(bufs))
+    clean, quality, meta = clean_hudl_export(sheets)
+    meta["upload_findings"] = findings
     return add_analysis_features(clean, OPPONENT_PROFILES[profile]), quality, meta
 
 
@@ -110,6 +113,11 @@ def tagged(cols):
 
 
 st.success(f"Processed {len(data):,} offensive snaps across {games} game(s): {', '.join(map(str, data['Game_ID'].unique()))}.")
+findings = meta.get("upload_findings", pd.DataFrame())
+if len(findings):
+    st.warning("**Upload check found file problems.** Review before using these numbers.\n\n" + "\n".join(
+        f"- **{r.Check}:** {r.Game}" + (f" matches {r.Matches} ({r.Overlap})" if r.Check != "Stacked games" else f" → {r.Matches}") + f". {r.Action}"
+        for r in findings.itertuples()))
 
 # ---------------------------------------------------------------- build tables once (used by tabs + Excel)
 form_cols = tagged(["Formation_Family", "Near_Far"])
@@ -155,6 +163,12 @@ PT = {
     "launch": launch_vs_strength(data),
 }
 quality = pd.concat([quality, pd.DataFrame(pass_type_quality(data), columns=quality.columns)], ignore_index=True)
+_f = meta.get("upload_findings", pd.DataFrame())
+quality = pd.concat([quality, pd.DataFrame([
+    ("Duplicate games dropped", int((_f["Check"] == "Duplicate game").sum()) if len(_f) else 0, "Same snaps uploaded twice; first upload kept"),
+    ("Possible duplicates (kept)", int((_f["Check"] == "Possible duplicate").sum()) if len(_f) else 0, "Most snaps match another upload; check the files"),
+    ("Stacked-game files split", int((_f["Check"] == "Stacked games").sum()) if len(_f) else 0, "PLAY # restarted inside one file"),
+], columns=quality.columns)], ignore_index=True)
 classified = data["Pass_Type_Source"].isin(["Tagged", "Inferred from play name"]) if "Pass_Type_Source" in data else pd.Series(False, index=data.index)
 tricks = build_trick_play_inventory(meta["trick_source"])
 ex_cols = [c for c in ["Game_ID", "Play_Number", "Quarter", "Down", "Distance", "Yard_Line", "Hash", "Formation_Raw",
@@ -173,6 +187,7 @@ with st.sidebar:
     st.divider()
     readme = pd.DataFrame([
         ["Games", ", ".join(map(str, data["Game_ID"].unique()))],
+        ["Upload check", "; ".join(f"{r.Check}: {r.Game} ({r.Matches})" for r in _f.itertuples()) if len(_f) else "No duplicate or stacked games found."],
         ["Sample", "Team tagged ODK = O, run/pass snaps only. Timeouts and dead-ball penalties removed."],
         ["Pre-snap rule", "Alerts and regression use only pre-snap info. Gain, result, and play direction are post-snap."],
         ["Score state", "Rebuilt from TD/FG/PAT results; score is BEFORE the snap."],
@@ -363,6 +378,9 @@ with tabs[9]:
 
 with tabs[10]:
     show(quality)
+    if len(_f):
+        st.subheader("Upload Check")
+        st.dataframe(_f, width="stretch", hide_index=True)
     if meta["unmapped_columns"]:
         st.caption("Columns not used: " + ", ".join(meta["unmapped_columns"]))
     st.download_button("Download clean play table (CSV)", data.to_csv(index=False), "formationiq_clean.csv")

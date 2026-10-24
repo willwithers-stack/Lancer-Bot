@@ -190,3 +190,75 @@ def test_pass_type_alerts_need_lift_and_block_post_snap():
     assert trips["Accuracy_Check"] in {"Developing", "Film Only"}       # never Verified without a model
     with pytest.raises(ValueError):
         pass_type_table(df, ["Pass_Type"])
+
+
+# ---------------------------------------------------------------- upload check (duplicates / stacked games)
+from src.duplicate_check import check_uploads, split_stacked_games, find_duplicate_games
+
+
+def _game(seed: int, n: int = 40) -> pd.DataFrame:
+    rng = np.random.default_rng(seed)
+    return pd.DataFrame({
+        "PLAY #": range(1, n + 1), "ODK": ["O", "D"] * (n // 2), "QTR": 1,
+        "DN": rng.integers(1, 4, n), "DIST": rng.integers(1, 15, n), "YARD LN": rng.integers(-49, 50, n),
+        "OFF FORM": rng.choice(["DUBS", "WIDE", "I SLOT", "RIGHT"], n), "PLAY TYPE": rng.choice(["Run", "Pass"], n),
+        "GN/LS": rng.integers(-3, 25, n), "RESULT": rng.choice(["Rush", "Complete", "Incomplete"], n),
+    })
+
+
+def test_exact_duplicate_under_new_name_is_dropped():
+    g = _game(1)
+    kept, f = check_uploads({"vs LCC": g, "vs Mt Carmel": g.copy(), "vs Poway": _game(2)})
+    assert list(kept) == ["vs LCC", "vs Poway"]
+    assert f["Check"].tolist() == ["Duplicate game"] and f.iloc[0]["Matches"] == "vs LCC"
+
+
+def test_renumbered_duplicate_still_caught():
+    g = _game(3); h = g.copy(); h["PLAY #"] = h["PLAY #"] + 100
+    kept, f = find_duplicate_games({"a": g, "b": h})
+    assert list(kept) == ["a"] and len(f) == 1
+
+
+def test_partial_overlap_is_flagged_not_dropped():
+    g = _game(4); h = pd.concat([g.iloc[:30], _game(5).iloc[30:]], ignore_index=True)
+    kept, f = find_duplicate_games({"a": g, "b": h})
+    assert list(kept) == ["a", "b"] and f[0][0] == "Possible duplicate"
+
+
+def test_different_games_pass_clean():
+    kept, f = check_uploads({f"g{i}": _game(10 + i) for i in range(6)})
+    assert len(kept) == 6 and f.empty
+
+
+def test_stacked_games_split_and_padding_ignored():
+    a, b = _game(6), _game(7, 30)
+    pad = pd.DataFrame({"PLAY #": range(1, 50)})          # Hudl padding rows: PLAY # only
+    stacked = pd.concat([a, b, pad], ignore_index=True)
+    out, f = split_stacked_games({"vs Poway": stacked})
+    assert list(out) == ["vs Poway (game 1)", "vs Poway (game 2)"]
+    assert len(out["vs Poway (game 1)"]) == 40 and len(out["vs Poway (game 2)"]) == 30
+    assert f[0][0] == "Stacked games"
+
+
+def test_stacked_copy_matches_single_file():
+    a, b = _game(8), _game(9)
+    kept, f = check_uploads({"vs Poway": pd.concat([a, b], ignore_index=True), "vs El Camino": a.copy()})
+    assert "vs El Camino" not in kept
+    assert set(f["Check"]) == {"Stacked games", "Duplicate game"}
+
+
+def test_same_file_name_uploaded_twice_is_kept_for_check(tmp_path):
+    from src.data_ingestion import read_uploads
+    g = _game(11)
+    p1 = tmp_path / "one"; p2 = tmp_path / "two"; p1.mkdir(); p2.mkdir()
+    g.to_excel(p1 / "vs LCC.xlsx", index=False); g.to_excel(p2 / "vs LCC.xlsx", index=False)
+    sheets = read_uploads([str(p1 / "vs LCC.xlsx"), str(p2 / "vs LCC.xlsx")])
+    assert list(sheets) == ["vs LCC", "vs LCC (2)"]
+    kept, f = check_uploads(sheets)
+    assert list(kept) == ["vs LCC"] and f.iloc[0]["Check"] == "Duplicate game"
+
+
+def test_clean_pipeline_runs_after_check():
+    kept, _ = check_uploads({"a": _game(12), "b": _game(12), "c": _game(13)})
+    data, quality, meta = clean_hudl_export(kept)
+    assert data["Game_ID"].nunique() == 2

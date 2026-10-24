@@ -26,6 +26,10 @@ def read_uploads(files) -> dict[str, pd.DataFrame]:
     out = {}
     for f in files:
         stem = getattr(f, "name", str(f)).rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        base, n = stem, 2
+        while stem in out or any(k.startswith(stem + " - ") for k in out):
+            stem = f"{base} ({n})"   # same file name uploaded twice: keep both so the duplicate check can see them
+            n += 1
         sheets = read_upload(f)
         if len(sheets) == 1:
             out[stem] = next(iter(sheets.values()))
