@@ -1,4 +1,7 @@
 # Lancer-Bot
+
+New here? Start with the **[Quick Start Guide and Definitions](docs/QUICK_START.md)**.
+
 ## Pass Type IQ
 
 Every pass is labeled at two levels:

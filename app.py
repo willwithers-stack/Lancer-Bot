@@ -44,6 +44,7 @@ DD_ORDER = [f"{d} & {k}" for d in ("1st", "2nd", "3rd", "4th") for k in ("Short"
 
 # ---------------------------------------------------------------- sidebar
 with st.sidebar:
+    st.link_button("Quick Start Guide & Definitions", "https://github.com/willwithers-stack/Lancer-Bot/blob/main/docs/QUICK_START.md", width="stretch")
     profile = st.selectbox("Opponent formation profile", list(OPPONENT_PROFILES), index=0)
     st.header("Alert Settings")
     high = st.slider("High-alert threshold", 0.60, 0.90, ALERT_THRESHOLD_HIGH, 0.01)
