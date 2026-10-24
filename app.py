@@ -16,6 +16,8 @@ from src.regression import fit_run_pass_model
 from src.trick_plays import build_trick_play_inventory
 from src.scoring import score_timeline, final_scores
 from src.report_builder import build_workbook
+from src.game_plan import (build_game_plan_sections, game_plan_table, plain_tendency, plain_pass_type,
+                           plain_plays)
 from src.verification import verify_alerts
 from src.pass_types import (build_pass_type_alerts, pass_type_table, pass_type_results,
                             play_action_after_run, launch_vs_strength, pass_type_quality)
@@ -128,6 +130,7 @@ reg, reg_err = run_regression(data, feats)   # runs silently; only feeds the Acc
 T = {
     "formation_alerts": verify_alerts(build_run_pass_alerts(data, form_cols, **alert_args), data, form_cols, reg),
     "composite_alerts": verify_alerts(build_run_pass_alerts(data, comp_cols, **alert_args), data, comp_cols, reg),
+    "dd_alerts": verify_alerts(build_run_pass_alerts(data, ["Down_Distance"], **alert_args), data, ["Down_Distance"], reg),
     "formation": tendency_table(data, ["Formation_Family"]),
     "formation_std": tendency_table(data, ["Formation_Standard"]),
     "formation_mod": tendency_table(data, ["Formation_Family", "Formation_Modifier"]),
@@ -228,9 +231,26 @@ with st.sidebar:
     ]
     if games >= MIN_FIRST_DRIVE_GAMES:
         sections.insert(6, ("First Drive", "FIRST DRIVE — BY PLAY IN DRIVE", tendency_table(first_drive, ["Play_In_Drive"])))
-    st.download_button("Download Excel scouting workbook", data=build_workbook(sections),
-                       file_name="FormationIQ_Scouting_Report.xlsx",
+    plan = game_plan_table(
+        [(T["formation_alerts"], form_cols), (T["composite_alerts"], comp_cols), (T["dd_alerts"], ["Down_Distance"])],
+        [(PT["alerts_form"], form_cols or ["Formation_Family"]), (PT["alerts_dd"], ["Down_Distance"]),
+         (PT["alerts_comp"], tagged(["Formation_Family", "Down_Distance"]) or ["Formation_Family"])])
+    gp_sections = build_game_plan_sections(
+        games=list(data["Game_ID"].unique()), n_snaps=len(rp),
+        pass_rate=(rp["Run_Pass"] == "Pass").mean() if len(rp) else 0.0,
+        upload_note=readme.loc[readme["Item"] == "Upload check", "Detail"].iloc[0],
+        alert_rule=readme.loc[readme["Item"] == "Alert rule", "Detail"].iloc[0],
+        plan=plan, formation=plain_tendency(T["formation"], "Formation_Family"),
+        dd=plain_tendency(T["dd"], "Down_Distance"), pass_type=plain_pass_type(PT["formation"], "Formation_Family"),
+        explosives=plain_plays(explosives), tricks=tricks, plays=plain_plays(rp))
+    st.download_button("Download Game Plan workbook", data=build_workbook(gp_sections),
+                       file_name="FormationIQ_Game_Plan.xlsx", type="primary", width="stretch",
                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.caption("Game Plan: Verified and Developing alerts, plain-English columns, column key on the Read Me sheet.")
+    st.download_button("Download full detail workbook", data=build_workbook(sections),
+                       file_name="FormationIQ_Full_Detail.xlsx", width="stretch",
+                       mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    st.caption("Full detail: every table and column, plus data quality and score timeline.")
 
 # ---------------------------------------------------------------- tabs
 tabs = st.tabs(["Executive Summary", "First Drive IQ", "Formation IQ", "Motion IQ", "Down & Distance",

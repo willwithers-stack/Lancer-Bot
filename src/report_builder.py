@@ -9,7 +9,8 @@ from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
 PURPLE, LIGHT_GRAY, WHITE, DARK, BORDER = "4B2E83", "F3F4F6", "FFFFFF", "202124", "B9A3D0"
-PCT_COLS = {"Run_Rate", "Pass_Rate", "Rate", "Team_Baseline", "Lift"}
+PCT_COLS = {"Run_Rate", "Pass_Rate", "Rate", "Team_Baseline", "Lift", "Share", "Comp_Pct", "Success", "Explosive",
+            "Quick %", "Dropback %", "Play Action / Movement %", "Screen %", "Trick Play %"}
 
 
 def _write_sheet(ws, title: str, data: pd.DataFrame):
@@ -49,7 +50,12 @@ def _write_sheet(ws, title: str, data: pd.DataFrame):
     ws.row_dimensions[3].height = 30
     for c in range(1, ncols + 1):
         vals = [str(ws.cell(r, c).value or "") for r in range(3, min(ws.max_row, 103) + 1)]
-        ws.column_dimensions[get_column_letter(c)].width = min(max(11, max(map(len, vals)) + 2), 40)
+        cap = 90 if ws.cell(3, c).value == "Detail" else 40
+        ws.column_dimensions[get_column_letter(c)].width = min(max(11, max(map(len, vals)) + 2), cap)
+    ws.page_setup.orientation = "landscape"
+    ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0
+    ws.sheet_properties.pageSetUpPr.fitToPage = True
+    ws.print_title_rows = "3:3"
 
 
 def build_workbook(sections: list[tuple[str, str, pd.DataFrame]]) -> bytes:

@@ -63,7 +63,10 @@ Leave these at their defaults unless you have a reason to change them.
 
 ### 6. Export
 
-Download the Excel workbook. Its Read Me sheet records the games, the settings and the upload check.
+Two downloads sit in the sidebar:
+
+- **Game Plan workbook** (`FormationIQ_Game_Plan.xlsx`) is the one to hand to coaches. Sheets: Read Me (games, settings, upload check and a column key), Game Plan (only Verified and Developing alerts, sorted Verified first, then biggest Lift), Formations, Down & Distance, Pass Type, Explosive Plays, Trick Plays (when found) and Play by Play. Columns are in plain English, for example Lean = "93% pass (28 of 30)". Every sheet prints landscape, one page wide.
+- **Full detail workbook** (`FormationIQ_Full_Detail.xlsx`) holds every table and column, plus Data Quality, Score Timeline and the full play log, for whoever runs the numbers.
 
 ---
 

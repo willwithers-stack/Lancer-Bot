@@ -262,3 +262,33 @@ def test_clean_pipeline_runs_after_check():
     kept, _ = check_uploads({"a": _game(12), "b": _game(12), "c": _game(13)})
     data, quality, meta = clean_hudl_export(kept)
     assert data["Game_ID"].nunique() == 2
+
+
+# ---------------------------------------------------------------- Game Plan workbook
+def _alerts():
+    return pd.DataFrame({
+        "Formation_Family": ["RIGHT", "WIDE", "BUNCH"], "Motion_Flag": [False, True, False],
+        "Plays": [30, 20, 12], "Games": [6, 5, 4], "Run": [2, 17, 6], "Pass": [28, 3, 6],
+        "Tendency": ["Pass", "Run", "Pass"], "Rate": [28 / 30, 0.85, 0.5], "Lift": [0.37, 0.41, 0.02],
+        "Accuracy_Check": ["✓ Verified", "Developing", "Film Only"], "Held_Up": ["5 of 6 games", "4 of 5 games", ""],
+    })
+
+
+def test_game_plan_keeps_only_verified_and_developing():
+    from src.game_plan import game_plan_table
+    plan = game_plan_table([(_alerts(), ["Formation_Family", "Motion_Flag"])], [])
+    assert list(plan["Look"]) == ["RIGHT + No Motion", "WIDE + Motion"]  # Verified first, Film Only dropped
+    assert plan.loc[0, "Lean"] == "93% pass (28 of 30)"
+    assert plan.loc[0, "Lift"] == "+37"
+    assert "Coaching_Implication" not in plan.columns
+
+
+def test_game_plan_sections_have_key_and_no_analyst_sheets():
+    from src.game_plan import build_game_plan_sections, game_plan_table
+    plan = game_plan_table([(_alerts(), ["Formation_Family"])], [])
+    secs = build_game_plan_sections(games=["A", "B"], n_snaps=62, pass_rate=0.6, upload_note="None.", alert_rule="x",
+                                    plan=plan, formation=pd.DataFrame(), dd=pd.DataFrame(), pass_type=pd.DataFrame(),
+                                    explosives=pd.DataFrame(), tricks=pd.DataFrame(), plays=pd.DataFrame())
+    names = [s[0] for s in secs]
+    assert names[:2] == ["Read Me", "Game Plan"] and "Data Quality" not in names and "Trick Plays" not in names
+    assert "Lift" in set(secs[0][2]["Item"])
