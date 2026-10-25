@@ -90,7 +90,7 @@ In plain words: the opponent passed on 28 of 30 snaps from TRIPS RIGHT across 7 
 | Motion IQ | Motion vs. no motion, motion by formation, motion direction |
 | Down & Distance | Run/pass by down and distance; pick a situation to see its formations, calls and plays |
 | Situation IQ | Field zone, hash, score state, score state + down & distance, strength to field/boundary, quarter |
-| Explosive Plays | Every snap that gained more than 20 yards |
+| Explosive Plays | Every snap that gained 15+ yards |
 | Trick Plays | Reverses, double passes, flea flickers, fake punts/FGs and other gadgets found in the play names |
 | Score Timeline | Score rebuilt from TD/FG/PAT results, calculated finals, scoring events |
 | Pivot Lab | Custom grouping by any pre-snap field |
@@ -173,7 +173,7 @@ The held-out test leaves out one game at a time. It uses only pre-snap informati
 |---|---|
 | **Gain** | GN/LS yards. |
 | **Success** | Gained at least 40% of the yards needed on 1st down, 60% on 2nd down, or 100% on 3rd or 4th down. |
-| **Explosive** | A gain of **more than 20 yards** (21+). |
+| **Explosive** | A gain of **15 yards or more** (15+). |
 | **Penalty snap** | A snap with a penalty in RESULT. It's flagged and kept; review it on film. |
 
 ### Pass types

@@ -138,7 +138,7 @@ def add_analysis_features(df: pd.DataFrame, family_rules=None) -> pd.DataFrame:
 
     data["Gain"] = _num(data, "Gain")
     data["Success_Flag"] = [success_flag(d, t, g) for d, t, g in zip(data["Down"], data["Distance"], data["Gain"])]
-    data["Explosive_Flag"] = data["Gain"] > EXPLOSIVE_GAIN_YARDS
+    data["Explosive_Flag"] = data["Gain"] >= EXPLOSIVE_GAIN_YARDS
     if "Run_Pass" in data:
         data = add_pass_types(data)   # Quick / Dropback / Play Action-Movement / Screen
     return data

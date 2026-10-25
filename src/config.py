@@ -6,7 +6,7 @@ MIN_ALERT_PLAYS = 6
 MIN_FIRST_DRIVE_GAMES = 3
 MIN_REGRESSION_ROWS = 50
 MIN_REGRESSION_GAMES = 3          # needed for leave-one-game-out validation
-EXPLOSIVE_GAIN_YARDS = 20         # explosive = gain strictly greater than this
+EXPLOSIVE_GAIN_YARDS = 15         # explosive = gain of this many yards or more (15+)
 MIN_LIFT_OVER_BASELINE = 0.10     # a tell must beat the team's overall rate by 10 pts
 
 # Confidence tiers (plays, rate) — evaluated top to bottom

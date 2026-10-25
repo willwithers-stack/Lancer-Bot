@@ -292,3 +292,10 @@ def test_game_plan_sections_have_key_and_no_analyst_sheets():
     names = [s[0] for s in secs]
     assert names[:2] == ["Read Me", "Game Plan"] and "Data Quality" not in names and "Trick Plays" not in names
     assert "Lift" in set(secs[0][2]["Item"])
+
+
+def test_explosive_is_15_plus():
+    from src.config import EXPLOSIVE_GAIN_YARDS
+    assert EXPLOSIVE_GAIN_YARDS == 15
+    gains = pd.Series([14, 15, 21])
+    assert list(gains >= EXPLOSIVE_GAIN_YARDS) == [False, True, True]

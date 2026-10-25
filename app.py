@@ -4,7 +4,7 @@ import io
 import pandas as pd
 import streamlit as st
 
-from src.config import (ALERT_THRESHOLD_HIGH, ALERT_THRESHOLD_WATCH, MIN_ALERT_PLAYS,
+from src.config import (EXPLOSIVE_GAIN_YARDS, ALERT_THRESHOLD_HIGH, ALERT_THRESHOLD_WATCH, MIN_ALERT_PLAYS,
                         MIN_FIRST_DRIVE_GAMES, PRE_SNAP_MODEL_FEATURES, OPPONENT_PROFILES)
 from src.data_ingestion import read_uploads
 from src.duplicate_check import check_uploads
@@ -223,7 +223,7 @@ with st.sidebar:
         ("Field Zone", "FIELD ZONE TENDENCIES", T["field_zone"]),
         ("Hash", "HASH TENDENCIES", T["hash"]),
         ("Field-Boundary", "STRENGTH TO FIELD / BOUNDARY", T["boundary"]),
-        ("Explosive Plays", "EVERY GAIN OVER 20 YARDS", explosives),
+        ("Explosive Plays", f"EVERY GAIN OF {EXPLOSIVE_GAIN_YARDS}+ YARDS", explosives),
         ("Trick Plays", "TRICK PLAY INVENTORY", tricks),
         ("Score Timeline", "SCORING EVENTS", timeline),
         ("Data Quality", "DATA QUALITY CHECKS", quality),
@@ -346,7 +346,7 @@ with tabs[5]:
         show(T[key], cols)
 
 with tabs[6]:
-    st.caption(f"{len(explosives)} plays gained more than 20 yards.")
+    st.caption(f"{len(explosives)} plays gained {EXPLOSIVE_GAIN_YARDS}+ yards.")
     if len(explosives):
         st.dataframe(explosives, width="stretch", hide_index=True)
     else:

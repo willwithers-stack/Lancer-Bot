@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import pandas as pd
 
+from src.config import EXPLOSIVE_GAIN_YARDS
+
 GUIDE_URL = "https://github.com/willwithers-stack/Lancer-Bot/blob/main/docs/QUICK_START.md"
 KEEP_CHECKS = ("✓ Verified", "Developing")
 LABELS = {"Formation_Family": "Formation", "Down_Distance": "D&D", "Near_Far": "Near/Far", "Motion_Flag": "Motion",
@@ -23,7 +25,7 @@ KEY = [
     ["Held Up", "Games where the lean was true out of games with the look, e.g. 4 of 5 games."],
     ["Confidence", "High (15+ plays, 70%+), Usable (10+, 65%+), Low Volume (6+, confirm on film), "
                    "No Clear Lean (under the watch rate)."],
-    ["Explosive", "Gain of 21+ yards."],
+    ["Explosive", f"Gain of {EXPLOSIVE_GAIN_YARDS}+ yards."],
     ["Pass type", "Quick / Dropback / Play Action-Movement / Screen, among passes only. Pass-type alerts top out at Developing."],
 ]
 
@@ -151,7 +153,7 @@ def build_game_plan_sections(*, games: list, n_snaps: int, pass_rate: float, upl
         ("Formations", "RUN / PASS BY FORMATION", formation),
         ("Down & Distance", "RUN / PASS BY DOWN & DISTANCE", dd),
         ("Pass Type", "PASS TYPE BY FORMATION", pass_type),
-        ("Explosive Plays", "EVERY GAIN OF 21+ YARDS", explosives),
+        ("Explosive Plays", f"EVERY GAIN OF {EXPLOSIVE_GAIN_YARDS}+ YARDS", explosives),
     ]
     if tricks is not None and not tricks.empty:
         sections.append(("Trick Plays", "TRICK PLAYS", tricks))
