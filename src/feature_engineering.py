@@ -110,10 +110,14 @@ def _flag_from_text(series: pd.Series) -> pd.Series:
 
 
 def add_analysis_features(df: pd.DataFrame, family_rules=None) -> pd.DataFrame:
+    if df is None or len(df) == 0:
+        raise ValueError(
+            "No offensive run/pass snaps found in these files. Check that the ODK column has 'O' rows, "
+            "the Run/Pass tags are filled in, and the file is not a duplicate or defense-only export.")
     data = apply_formation_mapping(df, family_rules) if family_rules else apply_formation_mapping(df)
 
-    data["Down_Bucket"] = _col(data, "Down", np.nan).map(bucket_down)
-    data["Distance_Bucket"] = _col(data, "Distance", np.nan).map(bucket_distance)
+    data["Down_Bucket"] = _col(data, "Down", np.nan).map(bucket_down).astype("string")
+    data["Distance_Bucket"] = _col(data, "Distance", np.nan).map(bucket_distance).astype("string")
     data["Down_Distance"] = data["Down_Bucket"].str[:3] + " & " + data["Distance_Bucket"].str.split(" ").str[0]
     data["Own_Yard_Line"] = _col(data, "Yard_Line", np.nan).map(normalize_yard_line)
     data["Field_Zone"] = data["Own_Yard_Line"].map(bucket_field_zone)
